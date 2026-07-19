@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+enum Priority	{
+  LOW
+  MEDIUM
+  HIGH
+}
+enum EntityType	{
+  BOARD
+  COLUMN
+  TASK
+}  
+model User{
+    id              String          @id  @default(uuid()) 
+    username	    String	        @unique
+    nickname        String?
+    email	        String	        @unique
+    passwordHash	String	    
+    avatarUrl	    String?	    
+    createdAt	    DateTime	    @default(now())
+    updatedAt	    DateTime	    @updatedAt
+
+    // Named relation
+    boards          Board[]         @relation("BoardCreator")   // "I can own many boards"
+    boardMembers    BoardMember[]   // "I can be a member of many boards"
+    columns         Column[]        @relation("ColumnCreator")
+    tasks           Task[]          @relation("TaskCreator")
+    taskAssignees  TaskAssignee[]  
+    subtasks        Subtask[]       @relation("SubtaskCreator")
+    comments        Comment[]       @relation("CommentAuthor")
+    refreshToken   RefreshToken[]  
+    @@map("users") 
+}
+model RefreshToken {
+    id         String       @id @default(uuid())
+    tokenHash  String       @unique
+    user       User         @relation(fields: [userID], references: [id],onDelete: Cascade)
+    userID     String
+    expiresAt  DateTime
+    createdAt  DateTime     @default(now())
+  
+}
+model Board{
+    id	            String     @id  @default(uuid())
+    name	        String	    
+    description	    String?	
+    createdBy       User	   @relation("BoardCreator",fields: [createdById],references: [id])
+    createdById     String              
+    createdAt	    DateTime   @default(now())
+    updatedAt	    DateTime   @updatedAt	
+    summary         String?
+    summaryGeneratedAt DateTime @default(now()) @updatedAt    
+    members         BoardMember[]   // "I can have many members
+    columns         Column[]
+    tasks           Task[]
+    activityLogs   ActivityLog[] 
+    @@map("boards")
+}
+model BoardMember{
+    user	        User       @relation(fields: [userID],references: [id], onDelete: Cascade)
+    userID          String     
+    board           Board      @relation(fields: [boardID],references: [id],onDelete: Cascade)  
+    boardID	        String     
+    role	        Role       @default(MEMBER)
+    createdAt	    DateTime   @default(now())
+
+    
+    @@id([userID,boardID])
+    @@index([boardID])
+    @@map("board_members")
+}
+model Column{
+    id              String     @id  @default(uuid())
+    board           Board      @relation(fields: [boardID],references: [id],onDelete: Cascade)         
+    boardID         String
+    title           String
+    order           Int
+    createdBy       User       @relation("ColumnCreator",fields: [createdById],references: [id])
+    createdById     String    
+    createdAt       DateTime   @default(now())
+    updatedAt       DateTime   @updatedAt
+    tasks           Task[]
+
+    @@map("columns")
+    @@unique([boardID, order])
+}
+// One caveat: when reordering columns via drag-and-drop, if you update multiple column orders sequentially outside a transaction, 
+// the unique constraint could temporarily conflict. Make sure your reorder route updates all affected column orders inside a 
+// $transaction. You'd be doing that anyway, but now the DB enforces it.
+
+model Task {
+    id	            String     @id  @default(uuid())
+    column          Column	   @relation(fields: [columnID],references: [id],onDelete: Cascade)
+    columnID        String
+    board           Board      @relation(fields: [boardID],references: [id],onDelete: Cascade)  
+    boardID 	    String
+    title	        String	
+    description	    String?
+    priority	    Priority   @default(MEDIUM)
+    dueDate	        DateTime?
+    order	        Int
+    createdBy       User       @relation("TaskCreator",fields: [createdById],references: [id])
+    createdById	    String
+    createdAt	    DateTime   @default(now())
+    updatedAt	    DateTime   @updatedAt
+
+    taskAssignee   TaskAssignee[]
+    subtasks        Subtask[]
+    comments        Comment[]
+
+   
+    @@index([columnID, order])
+    @@index([boardID])
+    @@map("tasks")
+}
+
+model TaskAssignee {
+    task            Task        @relation(fields: [taskID],references: [id],onDelete: Cascade)
+    taskID          String      
+    user            User        @relation(fields: [userID],references: [id],onDelete: Cascade)          
+    userID          String
+    createdAt       DateTime    @default(now())
+
+    @@id([taskID,userID])
+    @@map("task_assignees")
+}
+
+model Subtask{
+    id              String      @id @default(uuid())
+    task            Task        @relation(fields: [taskID],references: [id],onDelete: Cascade)
+    taskID          String
+    title           String
+    isCompleted     Boolean     @default(false)
+    createdBy       User        @relation("SubtaskCreator", fields: [createdByID], references: [id], onDelete: Cascade)
+    createdByID     String
+    createdAt       DateTime    @default(now())
+    updatedAt       DateTime    @updatedAt   // added
+    @@map("subtasks")
+}
+
+model Comment{
+    id              String      @id  @default(uuid())
+    task            Task        @relation(fields: [taskID],references: [id],onDelete: Cascade)
+    taskID          String
+    user            User        @relation("CommentAuthor",fields: [userID],references: [id],onDelete: Cascade)
+    userID          String
+    content         String
+    createdAt       DateTime    @default(now())
+    updatedAt       DateTime    @updatedAt
+
+    @@map("comments")
+}
+model ActivityLog {
+    id              String      @id  @default(uuid()) 
+    board           Board       @relation(fields: [boardID],references: [id],onDelete: Cascade)
+    boardID         String
+    userID          String
+    actorUsername   String
+    action          String
+    entityType      EntityType  
+    entityID        String
+    entityTitle     String
+    createdAt       DateTime    @default(now())
+
+    @@index([boardID])
+    @@map("activity_logs")
+}
