@@ -4,10 +4,10 @@ import { Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '@/types/api';
+import type { TaskBase } from '@/types/api';
 
 interface TaskCardProps {
-  task: Task;
+  task: TaskBase   ;
   onClick?: () => void;
   canDrag: boolean;
 }

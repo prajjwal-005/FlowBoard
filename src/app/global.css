@@ -59,7 +59,7 @@
    ============================================================ */
 @theme inline {
   /* Fonts (next/font injects --font-sans; this wires the utility) */
-  --font-sans:    var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-heading: var(--font-sans);
 
   /* shadcn semantic colors */

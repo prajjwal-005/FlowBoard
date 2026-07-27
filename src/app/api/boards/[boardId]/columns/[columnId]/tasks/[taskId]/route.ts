@@ -1,9 +1,12 @@
 import { logActivity } from "@/lib/activity";
 import { failure, success } from "@/lib/api";
+import { createNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toTaskBase } from "@/lib/socket/serialise";
 import { UpdateTaskSchema } from "@/schemas/taskSchema";
+import { emitTaskDeleted, emitTaskMoved, emitTaskUpdated } from "@/socket/emitters";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { NextRequest } from "next/server";
 import * as z from "zod";
@@ -162,24 +165,28 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 400
             );
         } 
-        const validColumn = await prisma.column.findUnique({
+
+        const [validColumn,taskExist] = await Promise.all([
+            prisma.column.findUnique({
                 where:{
                     id:validColumnId,
                     boardID:validBoardId
                 }
-        })
+            }),
+            prisma.task.findUnique({
+                where:{
+                    id:validTaskId,
+                    columnID:validColumnId,
+                    boardID:validBoardId
+                }
+            })  
+        ])
+         
         if(!validColumn)
             return failure( 
                 "Invalid input",
                 400
             )
-        const taskExist = await prisma.task.findUnique({
-            where:{
-                id:validTaskId,
-                columnID:validColumnId,
-                boardID:validBoardId
-            }
-        })  
         if(!taskExist)
             return failure(
                 "No task exist",
@@ -189,7 +196,8 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
             return failure(
                 "Forbidden", 
                     403
-                );     
+                );   
+        console.time('task-update')
         const task = await prisma.task.update({
             where: {
                 id:       validTaskId,
@@ -198,9 +206,16 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 },
             data:{
                 title,description,dueDate,order,columnID,priority
+            },
+            include:{
+                taskAssignee:{
+                    select: {userID:true}
+                }
             }    
         })
-
+        console.timeEnd('task-update')   
+        console.time('log-activity')
+       
         await logActivity({
                 boardID: validBoardId,
                 userID: session.userID,
@@ -210,6 +225,22 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 entityID: task.id,
                 entityTitle: task.title,
             })
+        console.timeEnd('log-activity')    
+        if (columnID) {
+            emitTaskMoved(validBoardId, validColumnId, columnID, toTaskBase(task))
+        } else {
+            emitTaskUpdated(validBoardId, toTaskBase(task))
+        }
+        if (dueDate !== undefined && dueDate?.toISOString() !== task.dueDate?.toISOString()) {
+            for (const a of task.taskAssignee) {
+                createNotification({ userID: a.userID, actorID: session.userID, type: 'TASK_DUE_DATE_CHANGED', message: `Task ${task.title} due date changed`, boardID: validBoardId, entityType: 'TASK', entityID: validTaskId })
+            }
+        }
+        if (priority !== undefined && priority !== task.priority) {
+            for (const a of task.taskAssignee) { 
+                createNotification({ userID: a.userID, actorID: session.userID, type: 'TASK_PRIORITY_CHANGED', message: `Task ${task.title} priority changed`, boardID: validBoardId, entityType: 'TASK', entityID: validTaskId })
+            }
+        }
         return success(
             task,
             "Updated task successfully",
@@ -311,6 +342,7 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 entityID: taskExist.id,
                 entityTitle: taskExist.title,
             })
+        emitTaskDeleted(validBoardId,validColumnId,validTaskId);    
         return success(
             null,
             "Deleted task successfully",

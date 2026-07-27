@@ -4,6 +4,7 @@ import { Search, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './UserAvatar';
 import { useUIStore } from '@/store/uiStore';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export function Navbar() {
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
@@ -28,14 +29,7 @@ export function Navbar() {
           </kbd>
         </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Notifications"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <Bell className="w-5 h-5" />
-        </Button>
+        <NotificationBell/>
 
         <div className="h-6 w-px bg-border mx-1" />
 

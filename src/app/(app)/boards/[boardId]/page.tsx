@@ -41,9 +41,26 @@ import { suggestionsKey, descriptionExpansionKey } from '@/lib/queryKeys';
 import { toast } from 'sonner';
 import { BoardSummaryButton } from '@/components/ai/BoardSummaryButton';
 import { useQueryClient } from '@tanstack/react-query';
+import { useBoardRoom } from '@/hooks/realtime/useBoardRoom';
+import { useTaskEvents } from '@/hooks/realtime/useTaskEvents';
+import { useColumnEvents } from '@/hooks/realtime/useColumnEvents';
+import { useBoardEvents } from '@/hooks/realtime/useBoardEvents';
+import { useSubtaskEvents } from '@/hooks/realtime/useSubtaskEvents'
+import { useCommentEvents } from '@/hooks/realtime/useCommentEvents'
+import { useAssigneeEvents } from '@/hooks/realtime/useAssigneeEvents'
+import { useMemberEvents } from '@/hooks/realtime/useMemberEvents'
+import { PresenceStack } from '@/components/board/PresenceStack';
 export default function BoardDetailPage() {
   const params = useParams<{ boardId: string }>();
   const { data: board, isLoading, error } = useBoard(params.boardId);
+  useBoardRoom(params.boardId)
+  useTaskEvents(params.boardId)
+  useColumnEvents(params.boardId)
+  useBoardEvents(params.boardId)
+  useSubtaskEvents(params.boardId)    // add
+  useCommentEvents(params.boardId)    // add
+  useAssigneeEvents(params.boardId)   // add
+  useMemberEvents(params.boardId)     // ad
   const { data: currentUser } = useCurrentUser();
 
   const createTaskColumnId = useUIStore((s) => s.createTaskColumnId);
@@ -147,49 +164,50 @@ return (
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6 shrink-0">
-        <div>
+      <div className="flex items-start justify-between mb-6 shrink-0 gap-4">
+        <div className="min-w-0">
             <h1 className="text-h1 font-semibold text-foreground tracking-tight">{board?.name}</h1>
             <p className="text-body text-muted-foreground mt-1">{board?.description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 shrink-0">
+            <PresenceStack boardId={params.boardId} />
+            <div className="flex items-center gap-2">
             <Link href={`/boards/${params.boardId}/settings`}>
                 <Button variant="outline" size="sm" className="gap-1.5">
-                    <Settings className="w-3.5 h-3.5" />
-                    Settings
+                <Settings className="w-3.5 h-3.5" />
+                Settings
                 </Button>
             </Link>
             <Link href={`/boards/${params.boardId}/activity`}>
                 <Button variant="outline" size="sm" className="gap-1.5">
-                    <History className="w-3.5 h-3.5" />
-                    Activity
+                <History className="w-3.5 h-3.5" />
+                Activity
                 </Button>
             </Link>
             <BoardSummaryButton
-            summary={board?.summary ?? null}
-            summaryGeneratedAt={board?.summaryGeneratedAt ?? null}
-            isPending={generateSummary.isPending}
-            onGenerate={() =>
+                summary={board?.summary ?? null}
+                summaryGeneratedAt={board?.summaryGeneratedAt ?? null}
+                isPending={generateSummary.isPending}
+                onGenerate={() =>
                 generateSummary.mutate(undefined, {
-                onError: () => toast.error('Failed to generate board summary'),
+                    onError: () => toast.error('Failed to generate board summary'),
                 })
-            }
+                }
             />
             {myRole && canCreateColumn(myRole) && (
                 <Button className="gap-2" onClick={() => setAddColumnOpen(true)}>
-                    <Plus className="w-4 h-4" />
-                    Add Column
+                <Plus className="w-4 h-4" />
+                Add Column
                 </Button>
             )}
             {myRole && (
-            <span className="text-caption font-medium text-muted-foreground bg-surface border border-border rounded-full px-2 py-0.5">
+                <span className="text-caption font-medium text-muted-foreground bg-surface border border-border rounded-full px-2 py-0.5">
                 {myRole}
-            </span>
+                </span>
             )}
-
-            
+            </div>
         </div>
-    </div>
+        </div>
  
 
     <ErrorBoundary fallback={<div className="p-6 text-center text-muted-foreground">Board view crashed. Try refreshing.</div>}>

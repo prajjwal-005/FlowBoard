@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { logActivity } from "@/lib/activity";
+import { emitTaskReordered } from "@/socket/emitters";
 
 const reorderTaskSchema = z.object({
   taskId:    z.uuid(),
@@ -20,29 +21,25 @@ const reorderTaskSchema = z.object({
 // order value back to clean 1000-gap intervals inside a $transaction.
 async function rebalanceTasks(
   boardId: string,
-  columnId:string,
+  columnId: string,
   taskId: string,
   prevOrder: number | null
 ) {
   const tasks = await prisma.task.findMany({
-        where: { 
-                   boardID:  boardId, 
-                   columnID: columnId
-                },
-        orderBy: { order: "asc" },
+    where: { boardID: boardId, columnID: columnId },
+    orderBy: { order: "asc" },
   });
 
-  const movedTask= tasks.find((c) => c.id === taskId);
-  if (!movedTask) return;
+  const movedTask = tasks.find((t) => t.id === taskId);
+  if (!movedTask) return [];
 
-  const rest = tasks.filter((c) => c.id !== taskId);
+  const rest = tasks.filter((t) => t.id !== taskId);
 
-  // Find insertion index using prevOrder as anchor
   let insertIndex: number;
   if (prevOrder === null) {
-    insertIndex = 0; // dropped at absolute top
+    insertIndex = 0;
   } else {
-    const prevIdx = rest.findIndex((c) => c.order === prevOrder);
+    const prevIdx = rest.findIndex((t) => t.order === prevOrder);
     insertIndex = prevIdx === -1 ? rest.length : prevIdx + 1;
   }
 
@@ -53,13 +50,15 @@ async function rebalanceTasks(
   ];
 
   await prisma.$transaction(
-    reordered.map((col, idx) =>
+    reordered.map((t, idx) =>
       prisma.task.update({
-        where: { id: col.id },
+        where: { id: t.id },
         data: { order: (idx + 1) * 1000 },
       })
     )
   );
+
+  return reordered.map((t, idx) => ({ id: t.id, order: (idx + 1) * 1000 }));
 }
 
 // ─── Route Handler ───────────────────────────────────────────────────────────
@@ -146,7 +145,8 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
 
     if (isCollision) {
       // Fallback path — integers collapsed, rebalance entire board
-      await rebalanceTasks(validBoardId,validColumnId ,taskId, prevOrder);
+        const updatedTasks = await rebalanceTasks(validBoardId,validColumnId ,taskId, prevOrder);
+        emitTaskReordered(validBoardId, validColumnId, updatedTasks);
         return success(
                 [], 
                 "Task reordered", 
@@ -156,22 +156,23 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
 
     // Primary path — single row update
     try {
-      await prisma.task.update({
-            where: { 
-                id: taskId, 
-                boardID: validBoardId 
-            },
-            data: { order: newOrder },
-      });
-      await logActivity({
-                boardID: validBoardId,
-                userID: session.userID,
-                actorUsername: session.username, 
-                action: "TASK_REORDERED",
-                entityType: "TASK",
-                entityID: task.id,
-                entityTitle: task.title,
-            })
+        await prisma.task.update({
+                where: { 
+                    id: taskId, 
+                    boardID: validBoardId 
+                },
+                data: { order: newOrder },
+        });
+        await logActivity({
+                    boardID: validBoardId,
+                    userID: session.userID,
+                    actorUsername: session.username, 
+                    action: "TASK_REORDERED",
+                    entityType: "TASK",
+                    entityID: task.id,
+                    entityTitle: task.title,
+                })
+        emitTaskReordered(validBoardId, validColumnId, [{ id: taskId, order: newOrder }]);
         return success(
                 [], 
                 "Task reordered", 
@@ -181,7 +182,9 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
       if (err instanceof PrismaClientKnownRequestError &&err.code === "P2002") {
         // Unique constraint hit despite collision check passing
         // (client desync) — fall back to rebalance as safety net
-        await rebalanceTasks(validBoardId,validColumnId, taskId, prevOrder);
+        const updatedTasks  = await rebalanceTasks(validBoardId,validColumnId, taskId, prevOrder);
+        emitTaskReordered(validBoardId, validColumnId, updatedTasks);
+
         return success(
             [], 
             "Task reordered", 

@@ -6,6 +6,8 @@ import { NextRequest } from "next/server";
 import { updateBoardSchema ,boardIdSchema} from "@/schemas/boardSchema";
 import { z } from "zod";
 import { logActivity } from "@/lib/activity";
+import { emitBoardDeleted, emitBoardUpdated } from "@/socket/emitters";
+import { toBoardBase } from "@/lib/socket/serialise";
 
 export async function GET(request:NextRequest, { params }: { params: Promise<{ boardId: string }> }) {
     
@@ -126,7 +128,7 @@ export async function PATCH(request:NextRequest, { params }: { params: Promise<{
                 "Not allowed",
                 403
             )
-        const updatedElement = await prisma.board.update({
+        const board = await prisma.board.update({
             where:{
                 id: validBoardId,
             },
@@ -142,10 +144,11 @@ export async function PATCH(request:NextRequest, { params }: { params: Promise<{
             action: "BOARD_UPDATED",
             entityType: "BOARD",
             entityID:  validBoardId,
-            entityTitle: updatedElement.name,
+            entityTitle: board.name,
         })
+        emitBoardUpdated(validBoardId,toBoardBase(board));
         return success(
-            updatedElement,
+            board,
             "Successfully Updated name and description",
             200
         )
@@ -198,7 +201,7 @@ export async function DELETE(request:NextRequest, { params }: { params: Promise<
                 id: validBoardId,
             }
         })
-        
+        emitBoardDeleted(validBoardId);
         return success(
             null,
             "Successfully deleted board",

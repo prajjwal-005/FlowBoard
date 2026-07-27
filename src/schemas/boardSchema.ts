@@ -17,4 +17,9 @@ export const updateBoardSchema = boardSchema
         d => d.name !== undefined || d.description !== undefined,
         { message: "At least one field required" }
     )
+export type UpdateBoardInput = z.infer<typeof updateBoardSchema>;
+
 export const boardIdSchema = z.uuid();    
+export const columnSchema = z.object({
+  title: z.string().min(1).max(100).trim()
+});

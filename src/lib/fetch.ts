@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { toast } from "sonner"
 type FetchOptions = RequestInit & {
     params?: Record<string, string>
 }
@@ -39,6 +40,18 @@ async function fetchClient<T>(
             window.location.href = "/login"
             throw new Error("Unauthenticated")
         }
+    }
+    if(response.status === 429){
+        if(!isServer){
+            const retryAfter = response.headers.get("Retry-After");
+            const seconds = retryAfter?parseInt(retryAfter,10):null;
+            toast.message(
+                seconds?
+                    `Too many requests. Try again in sometime`:
+                    "Too many request. Try again later."
+            )
+        }
+        throw new Error("RateLimited");
     }
 
     if (!response.ok) {

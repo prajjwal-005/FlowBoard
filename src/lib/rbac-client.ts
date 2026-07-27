@@ -67,3 +67,4 @@ export function canCreateComment(role: Role) {
 export function canAssignMembers(role: Role) {
   return roleRank[role] >= roleRank.ADMIN;
 }
+

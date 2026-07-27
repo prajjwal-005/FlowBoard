@@ -2,10 +2,11 @@ import { callAI } from "@/lib/ai";
 import { AI_OUTPUT_SCHEMAS, AI_PROMPTS } from "@/lib/ai-prompts";
 import { failure, success} from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { boardIdSchema } from "@/schemas/boardSchema";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request:NextRequest,{params}:{params:Promise<{boardId:string}>}) {
     try {
@@ -15,6 +16,17 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{boardId
                 "Not authenticated",
                 401
             )
+        const {allowed,remaining, resetAt} =  await checkRateLimit(
+            `ratelimit:summary:${session.userID}`,
+            2,
+            300
+        )
+        if (!allowed) {
+            return NextResponse.json(
+                { message: "AI request limit reached. Try again later.", success: false },
+                { status: 429, headers: { "Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+            );
+        }     
         const {boardId} = await params;
         const parsedBoardId = boardIdSchema.safeParse(boardId);
         if(!parsedBoardId.success)

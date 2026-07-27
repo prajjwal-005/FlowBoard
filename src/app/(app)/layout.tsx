@@ -5,6 +5,7 @@ import { Navbar } from '@/components/shared/Navbar';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
 import { CommandPalette } from '@/components/shared/CommandPalette';
 import { useCommandPaletteShortcut } from '@/hooks/useCommandPaletteShortcut';
+import { RealtimeProvider } from '@/components/RealtimeProvider';
 
 
 export default function AppLayout({
@@ -15,6 +16,7 @@ export default function AppLayout({
       
   useCommandPaletteShortcut();
   return (
+    <RealtimeProvider>
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Sidebar - Fixed to the left */}
       <Sidebar />
@@ -32,6 +34,7 @@ export default function AppLayout({
      <CreateBoardModal />
      <CommandPalette /> 
     </div>
+    </RealtimeProvider>
   );
 }
 

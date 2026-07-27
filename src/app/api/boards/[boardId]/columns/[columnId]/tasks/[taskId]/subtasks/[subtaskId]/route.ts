@@ -3,7 +3,9 @@ import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toSubtask } from "@/lib/socket/serialise";
 import { UpdateSubtaskSchema } from "@/schemas/taskSchema";
+import { emitSubtaskDeleted, emitSubtaskUpdated } from "@/socket/emitters";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { NextRequest } from "next/server";
 import * as z from "zod";
@@ -97,6 +99,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
             entityID: taskExist.id,
             entityTitle: taskExist.title,
         })
+        emitSubtaskUpdated(validBoardId, validTaskId, toSubtask(updateSubtask))
         return success(
             updateSubtask,
             "Updated subtask successfully",
@@ -196,7 +199,8 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 entityID: taskExist.id,
                 entityTitle: taskExist.title,
         })
-        
+        emitSubtaskDeleted(validBoardId, validTaskId, validSubtaskId)
+
         return success(
             null,
             "Deleted subtask successfully",

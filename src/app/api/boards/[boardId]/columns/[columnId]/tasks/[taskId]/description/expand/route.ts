@@ -2,19 +2,32 @@ import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { boardColumnTaskIdSchema } from "@/schemas/taskSchema";
 import { callAI } from "@/lib/ai";
 import { AI_OUTPUT_SCHEMAS, AI_PROMPTS } from "@/lib/ai-prompts";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function POST(request:NextRequest, {params}:{params:Promise<{boardId:string,columnId:string,taskId:string}>}) {
     try {
         const session = await getSession(request);
+
         if(!session) 
             return failure( 
                 "Not authenticated",
                 401
             )
+        const {allowed,remaining, resetAt} =  await checkRateLimit(
+            `ratelimit:expand:${session.userID}`,
+            2,
+            300
+        )
+        if (!allowed) {
+            return NextResponse.json(
+                { message: "AI request limit reached. Try again later.", success: false },
+                { status: 429, headers: { "Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)) } }
+            );
+        }    
         const {boardId,columnId,taskId} = await params;
         const parseBoardId  = boardColumnTaskIdSchema.safeParse(boardId);
         const parseColumnId = boardColumnTaskIdSchema.safeParse(columnId);

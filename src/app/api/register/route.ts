@@ -1,5 +1,6 @@
 import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { generateAccessToken, generateRefreshToken, hashToken } from "@/lib/token";
 import { registerSchema } from "@/schemas/registerSchema";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
@@ -9,6 +10,15 @@ import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
     try {   
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const {allowed,remaining, resetAt} =  await checkRateLimit(
+        `ratelimit:register:${ip}`,
+        5,
+        60
+    )
+    if (!allowed) {
+        return failure("Too many login attempts. Try again later.", 429);
+    }
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 

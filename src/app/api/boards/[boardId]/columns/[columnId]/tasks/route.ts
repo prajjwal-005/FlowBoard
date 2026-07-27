@@ -3,7 +3,9 @@ import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toTaskBase } from "@/lib/socket/serialise";
 import { CreateTaskSchema } from "@/schemas/taskSchema";
+import { emitTaskCreated } from "@/socket/emitters";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { NextRequest } from "next/server";
 import * as z from "zod";
@@ -99,6 +101,7 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 entityID: createTask.id,
                 entityTitle: createTask.title,
             })
+            emitTaskCreated(validBoardId, validColumnId, toTaskBase(createTask))
         return success(
             createTask,
             "Created task successfully",

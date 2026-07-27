@@ -1,8 +1,10 @@
 import { logActivity } from "@/lib/activity";
 import { failure, success } from "@/lib/api";
+import { createNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { emitMemberAdded, emitMemberRemoved, emitMemberRoleChanged } from "@/socket/emitters";
 import { NextRequest } from "next/server";
 import * as z from "zod"
 
@@ -142,6 +144,11 @@ export async function POST(request:NextRequest,{params}:{params :Promise<{boardI
                 data:{
                     userID: targetUser.id,
                     boardID: validBoardId
+                },
+                include:{
+                    user:{
+                        select:{username:true,avatarUrl:true,id:true}
+                    }
                 }
             })
  
@@ -154,6 +161,8 @@ export async function POST(request:NextRequest,{params}:{params :Promise<{boardI
                 entityID:  validBoardId,
                 entityTitle: targetUser.username,
             })
+            emitMemberAdded(validBoardId, { userID:newMember.userID, role: newMember.role, user: { username: targetUser.username, avatarUrl: targetUser.avatarUrl } })
+            createNotification({ userID: newMember.userID, actorID: session.userID, type: 'MEMBER_ADDED', message: `Memebr added ${targetUser.username}`, boardID: validBoardId, entityType: 'BOARD', entityID: validBoardId })
             return success(
                 newMember,
                 "member added successfully",
@@ -267,7 +276,10 @@ export async function PATCH(request:NextRequest,{params}:{params :Promise<{board
                 entityType: "BOARD",
                 entityID:  validBoardId,
                 entityTitle: targetUser.username,
-        })    
+        })   
+        emitMemberRoleChanged(validBoardId, updateRole.userID, updateRole.role)
+        createNotification({ userID: targetMember.userID, actorID: session.userID, type: 'ROLE_CHANGED', message: `Memebr role changed: ${targetUser.username}`, boardID: validBoardId, entityType: 'BOARD', entityID: validBoardId })
+
         return success(
             updateRole,
             "updated role successfully",
@@ -386,6 +398,10 @@ export async function DELETE(request:NextRequest,{params}:{params :Promise<{boar
                 entityID:  validBoardId,
                 entityTitle: targetUser.username,
         })
+        emitMemberRemoved(validBoardId, targetUser.id)
+        
+        createNotification({ userID: targetMember.userID, actorID: session.userID, type: "MEMBER_REMOVED", message: `Memebr Removed: ${targetUser.username}`, boardID: validBoardId, entityType: 'BOARD', entityID: validBoardId })
+
         return success(
             [],
             "Deleted member successfully",

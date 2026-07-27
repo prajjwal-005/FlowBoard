@@ -57,3 +57,12 @@ export type ActivityAction =
   | "MEMBER_ADDED"
   | "MEMBER_REMOVED"
   | "MEMBER_ROLE_CHANGED";
+
+  export type NotificationType =
+  | 'TASK_ASSIGNED'
+  | 'MEMBER_ADDED'
+  | 'MEMBER_REMOVED'
+  | 'ROLE_CHANGED'
+  | 'TASK_PRIORITY_CHANGED'
+  | 'TASK_DUE_DATE_CHANGED'
+  | 'TASK_COMMENTED'

@@ -1,3 +1,5 @@
+import { NotificationType } from ".";
+
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH'
 export type Role = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 export type EntityType = 'BOARD' | 'COLUMN' | 'TASK'
@@ -18,6 +20,7 @@ export interface ActivityLogEntry {
   entityTitle: string;
   createdAt: string;
 }
+
 export interface Subtask {
   id: string;
   title: string;
@@ -25,74 +28,83 @@ export interface Subtask {
   taskID: string;
   createdByID: string;
   createdAt: string;
+  updatedAt: string;        // fixed: was missing
 }
 
-export interface Comment {
+export interface CommentBase {
   id: string;
   content: string;
   taskID: string;
   userID: string;
   createdAt: string;
   updatedAt: string;
-  user: {
-    username: string;
-    avatarUrl: string | null;
-  };
 }
-export interface Assignee {
+export interface Comment extends CommentBase {
+  user: { username: string; avatarUrl: string | null };
+}
+
+export interface AssigneeBase {
   userID: string;
   taskID: string;
   createdAt: string;
-  user: {
-    username: string;
-    avatarUrl: string | null;
-  };
 }
-export interface Task {
+export interface Assignee extends AssigneeBase {
+  user: { username: string; avatarUrl: string | null };
+}
+
+export interface TaskBase {
   id: string;
   title: string;
   description: string | null;
   boardID: string;
   columnID: string;
   order: number;
-  dueDate: Date | null;
+  dueDate: string | null;
   priority: Priority | null;
   createdById: string;
-  createdBy: { username: string };
   createdAt: string;
   updatedAt: string;
+}
+export interface Task extends TaskBase {
+  createdBy: { username: string };
   subtasks: Subtask[];
   comments: Comment[];
   assignees: Assignee[];
 }
-export interface Member {
+
+export interface MemberBase {
   userID: string;
   role: Role;
-  user: {
-    username: string;
-    avatarUrl: string | null;
-  };
 }
-export interface Column {
+export interface Member extends MemberBase {
+  user: { username: string; avatarUrl: string | null };
+}
+
+export interface ColumnBase {
   id: string;
   title: string;
   boardID: string;
   order: number;
   createdAt: string;
   updatedAt: string;
-  tasks: Task[];
+}
+export interface Column extends ColumnBase {
+  tasks: TaskBase[];
 }
 
-export interface Board {
+
+export interface BoardBase {
   id: string;
   name: string;
   description: string | null;
   createdAt: string;
   updatedAt: string;
-  role:Role;
   summary: string | null;
   summaryGeneratedAt: string | null;
-  columns: Column[];
+}
+export interface Board extends BoardBase {
+  role: Role;
+  columns: Column[];   // reverted — board GET does include nested tasks
 }
 export interface User {
   id: string;
@@ -101,9 +113,22 @@ export interface User {
   email: string;
   avatarUrl: string | null;
 }
+
 export interface ApiResponse<T> {
   statusCode: number;
   message: string;
   data: T;
   success: boolean;
+}
+
+export interface NotificationEntry {
+  id: string;
+  userID: string;
+  type: NotificationType
+  message: string;
+  boardID: string;
+  entityType: EntityType;
+  entityID: string;
+  isRead: boolean;
+  createdAt: string;
 }

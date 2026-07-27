@@ -3,7 +3,9 @@ import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toComment } from "@/lib/socket/serialise";
 import { UpdateCommentSchema } from "@/schemas/taskSchema";
+import { emitCommentDeleted, emitCommentUpdated } from "@/socket/emitters";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { NextRequest } from "next/server";
 import * as z from "zod";
@@ -86,10 +88,16 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 },
             data:{
                 content,
-            }      
+            },
+            include:{
+                user:{
+                    select:{username:true, avatarUrl:true}
+                }
+            }          
         })
 
-        
+        emitCommentUpdated(validBoardId, validTaskId, toComment(updateComment))
+
         return success(
             updateComment,
             "Updated comment successfully",
@@ -185,7 +193,7 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
             entityID: validTaskId,
             entityTitle: comment.content,
         })
-        
+        emitCommentDeleted(validBoardId, validTaskId, validCommentId);
         return success(
             null,
             "Deleted comment successfully",

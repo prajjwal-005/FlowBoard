@@ -1,9 +1,12 @@
 import { logActivity } from "@/lib/activity";
 import { failure, success } from "@/lib/api";
+import { createNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toComment } from "@/lib/socket/serialise";
 import { CreateCommentSchema } from "@/schemas/taskSchema";
+import { emitCommentCreated } from "@/socket/emitters";
 import { NextRequest } from "next/server";
 import * as z from "zod";
 const boardColumnTaskIdSchema = z.uuid();
@@ -62,7 +65,13 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 id:validTaskId,
                 columnID:validColumnId,
                 boardID:validBoardId
+            },
+            include:{
+                taskAssignee:{
+                    select:{userID:true}
+                }
             }
+
         })  
         if(!taskExist)
             return failure(
@@ -74,6 +83,12 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 content,
                 taskID:validTaskId,
                 userID:session.userID
+            },
+            include:{
+                user:{
+                    select:{username:true, avatarUrl:true}
+                }
+                
             }        
         })
 
@@ -86,6 +101,14 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
             entityID: taskExist.id,
             entityTitle: taskExist.title,
         })
+
+        emitCommentCreated(validBoardId, validTaskId, toComment(createComment)) // comment already has .user from include
+         
+        const recipients = [...new Set([taskExist.createdById, ...taskExist.taskAssignee.map(a => a.userID)])]
+        for (const userID of recipients) {
+            createNotification({ userID, actorID: session.userID, type: 'TASK_COMMENTED', message: `${session.username} commented on "${taskExist.title}"`, boardID: validBoardId, entityType: 'TASK', entityID: validTaskId })
+        }                
+                    
         return success(
             createComment,
             "Created comment successfully",

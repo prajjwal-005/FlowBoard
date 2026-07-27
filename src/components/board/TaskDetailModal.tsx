@@ -315,11 +315,24 @@ export function TaskDetailModal({
               value={descDraft}
               onChange={(e) => setDescDraft(e.target.value)}
               onBlur={commitDescription}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                commitDescription();
+                }
+             }}
               rows={4}
               maxLength={2000}
               placeholder="Add a description…"
               disabled={!canEditFields}
             />
+
+            {canEditFields && descDraft !== task.description && (
+            <p className="mt-1 text-caption text-muted-foreground">
+                Press Ctrl+Enter (⌘+Enter on Mac) or click away to save
+            </p>
+            )}
+
             {canEditFields && (
               <div className="mt-2">
                 {!descriptionSuggestion && !descriptionSuggestionLoading && (

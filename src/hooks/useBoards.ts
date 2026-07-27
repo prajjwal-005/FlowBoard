@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/fetch';
 import type { ApiResponse } from '@/types/api';
 import { Board } from '@/types/api';
 import { boardKeys } from '@/lib/queryKeys';
+import { UpdateBoardInput } from '@/schemas/boardSchema';
 
 export function useBoards() {
   return useQuery({

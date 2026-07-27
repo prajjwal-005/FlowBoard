@@ -3,7 +3,32 @@ import { api } from '@/lib/fetch';
 import { boardKeys } from '@/lib/queryKeys';
 import { toast } from 'sonner';
 import type { Board } from '@/types/api';
+import { columnSchema } from '@/schemas/boardSchema';
+import * as z from 'zod';
+// useColumns.ts
+export function useCreateColumn(boardId: string) {
+  const queryClient = useQueryClient();
 
+  const createColumn = useMutation({
+    mutationFn: (data: z.infer<typeof columnSchema>) =>
+      api.post(`/api/boards/${boardId}/columns`, data),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: boardKeys.detail(boardId),
+      });
+      toast.success("Column created");
+    },
+
+    onError: () => {
+      toast.error("Failed to create column");
+    },
+  });
+
+  return {
+    createColumn,
+  };
+}
 export function useDeleteColumn(boardId: string) {
   const queryClient = useQueryClient();
   return useMutation({

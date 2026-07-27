@@ -1,9 +1,11 @@
 import { logActivity } from "@/lib/activity";
 import { failure, success } from "@/lib/api";
+import { createNotification } from "@/lib/notifications";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { AssigneeSchema} from "@/schemas/taskSchema";
+import { emitAssigneeAdded, emitAssigneeRemoved } from "@/socket/emitters";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { NextRequest } from "next/server";
 import * as z from "zod";
@@ -43,7 +45,8 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
             },
             select: { 
                 id: true, 
-                username: true 
+                username: true,
+                avatarUrl:true 
             } 
         });
         if(!targetUser) return failure(
@@ -104,11 +107,16 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 "No task exist",
                 404
             )  
-        const Assignee = await prisma.taskAssignee.create({
+        const assignee = await prisma.taskAssignee.create({
             data:{
                 userID,
                 taskID:validTaskId
-            }    
+            },
+            include:{
+                user:{
+                    select:{username:true, avatarUrl:true}
+                }
+            }
                 
             
         })
@@ -121,8 +129,10 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
             entityID: validTaskId,
             entityTitle: targetUser.username,
         })
+        emitAssigneeAdded(validBoardId, validTaskId, { userID, taskID: validTaskId, createdAt: assignee.createdAt.toISOString(), user: { username: targetUser.username, avatarUrl: targetUser.avatarUrl } })
+        createNotification({ userID: userID, actorID: session.userID, type: 'TASK_ASSIGNED', message: `${session.username} assigned you to "${taskExist.title}"`, boardID: validBoardId, entityType: 'TASK', entityID: taskExist.id })
         return success(
-            Assignee,
+            assignee,
             "Created assignee successfully",
             201
         ) 
@@ -246,6 +256,8 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
             entityID: validTaskId,
             entityTitle: targetUser.username,
         })
+
+        emitAssigneeRemoved(validBoardId, validTaskId, userID);
         return success(
             null,
             "Deleted assignee successfully",

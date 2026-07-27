@@ -182,3 +182,15 @@ model ActivityLog {
     @@index([boardID])
     @@map("activity_logs")
 }
+model Notification {
+     id         String   @id @default(uuid())
+     userID     String   // recipient
+     type       String
+     message    String
+     boardID    String
+     entityType EntityType
+     entityID   String
+     isRead     Boolean  @default(false)
+     createdAt  DateTime @default(now())
+     @@index([userID])
+   }

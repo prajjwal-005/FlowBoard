@@ -6,6 +6,8 @@ import { NextRequest } from "next/server";
 import { boardIdSchema } from "@/schemas/boardSchema";
 import * as z from "zod";
 import { logActivity } from "@/lib/activity";
+import { emitColumnCreated } from "@/socket/emitters";
+import { toColumnBase } from "@/lib/socket/serialise";
 
 export const columnSchema  = z.object({
     title: z.string().min(1).max(100).trim()
@@ -79,6 +81,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{boardId
             entityID:  column.id,
             entityTitle: column.title,
         })
+        emitColumnCreated(validBoardId, toColumnBase(column))
        
         return success( 
             column,

@@ -3,13 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { generateAccessToken, generateRefreshToken, hashToken } from "@/lib/token";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/schemas/loginSchema";
-
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export async function POST(request: Request) {
-    try {   
+try {  
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    const {allowed,remaining, resetAt} =  await checkRateLimit(
+        `ratelimit:login:${ip}`,
+        5,
+        60
+    )
+    if (!allowed) {
+        return failure("Too many login attempts. Try again later.", 429);
+    }
     const body = await request.json();
-    const parsed = loginSchema.safeParse(body);
 
+
+    const parsed = loginSchema.safeParse(body);
+    
     if (!parsed.success) {
     return failure("Invalid input", 400);
     }

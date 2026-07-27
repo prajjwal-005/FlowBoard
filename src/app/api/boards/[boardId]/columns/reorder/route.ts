@@ -58,6 +58,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { logActivity } from "@/lib/activity";
+import { emitColumnReordered } from "@/socket/emitters";
 
 const reorderColumnSchema = z.object({
   columnId: z.string().uuid(),
@@ -69,25 +70,20 @@ const reorderColumnSchema = z.object({
 // Queries all columns for the board, places the moved column at the correct
 // relative slot in memory using prevOrder as the anchor, then rewrites every
 // order value back to clean 1000-gap intervals inside a $transaction.
-async function rebalanceColumns(
-  boardId: string,
-  columnId: string,
-  prevOrder: number | null
-) {
+async function rebalanceColumns(boardId: string, columnId: string, prevOrder: number | null) {
   const columns = await prisma.column.findMany({
     where: { boardID: boardId },
     orderBy: { order: "asc" },
   });
 
   const movedColumn = columns.find((c) => c.id === columnId);
-  if (!movedColumn) return;
+  if (!movedColumn) return [];
 
   const rest = columns.filter((c) => c.id !== columnId);
 
-  // Find insertion index using prevOrder as anchor
   let insertIndex: number;
   if (prevOrder === null) {
-    insertIndex = 0; // dropped at absolute top
+    insertIndex = 0;
   } else {
     const prevIdx = rest.findIndex((c) => c.order === prevOrder);
     insertIndex = prevIdx === -1 ? rest.length : prevIdx + 1;
@@ -100,13 +96,15 @@ async function rebalanceColumns(
   ];
 
   await prisma.$transaction(
-    reordered.map((col, idx) =>
+    reordered.map((c, idx) =>
       prisma.column.update({
-        where: { id: col.id },
+        where: { id: c.id },
         data: { order: (idx + 1) * 1000 },
       })
     )
   );
+
+  return reordered.map((c, idx) => ({ id: c.id, order: (idx + 1) * 1000 }));
 }
 
 // ─── Route Handler ───────────────────────────────────────────────────────────
@@ -190,52 +188,37 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
       newOrder === nextOrder;
 
     if (isCollision) {
-      // Fallback path — integers collapsed, rebalance entire board
-      await rebalanceColumns(validBoardId, columnId, prevOrder);
-        return success(
-                [], 
-                "Column reordered", 
-                200
-        );
+        const updatedColumns = await rebalanceColumns(validBoardId, columnId, prevOrder);
+        emitColumnReordered(validBoardId, updatedColumns);
+        return success([], "Column reordered", 200);
     }
 
-    // Primary path — single row update
     try {
         await prisma.column.update({
-                where: { 
-                    id: columnId, 
-                    boardID: validBoardId 
-                },
-                data: { order: newOrder },
-        });
-      
-        await logActivity({
-                boardID: validBoardId,
-                userID: session.userID,
-                actorUsername: session.username, 
-                action: "COLUMN_REORDERED",
-                entityType: "COLUMN",
-                entityID: column.id,
-                entityTitle: column.title,
-            })
-        return success(
-                [], 
-                "Column reordered", 
-                200
-        );
+            where: { id: columnId, boardID: validBoardId },
+            data: { order: newOrder },
+    });
+
+    await logActivity({
+        boardID: validBoardId,
+        userID: session.userID,
+        actorUsername: session.username, 
+        action: "COLUMN_REORDERED",
+        entityType: "COLUMN",
+        entityID: column.id,
+        entityTitle: column.title,
+    })
+    emitColumnReordered(validBoardId, [{ id: columnId, order: newOrder }]);
+    return success([], "Column reordered", 200);
     } catch (err) {
-      if (err instanceof PrismaClientKnownRequestError &&err.code === "P2002") {
-        // Unique constraint hit despite collision check passing
-        // (client desync) — fall back to rebalance as safety net
-        await rebalanceColumns(validBoardId, columnId, prevOrder);
-        return success(
-            [], 
-            "Column reordered", 
-            200
-        );
-      }
-      throw err; // re-throw anything else to outer catch
+    if (err instanceof PrismaClientKnownRequestError && err.code === "P2002") {
+        const updatedColumns = await rebalanceColumns(validBoardId, columnId, prevOrder);
+        emitColumnReordered(validBoardId, updatedColumns);
+        return success([], "Column reordered", 200);
     }
+    throw err;
+    }
+
   } catch (error) {
         return failure(
             "Internal server error", 

@@ -6,6 +6,8 @@ import { CreateSubtaskSchema } from "@/schemas/taskSchema";
 import { NextRequest } from "next/server";
 import { logActivity } from "@/lib/activity";
 import * as z from "zod";
+import { emitSubtaskCreated } from "@/socket/emitters";
+import { toSubtask } from "@/lib/socket/serialise";
 
 const boardColumnTaskIdSchema = z.uuid();
 
@@ -88,6 +90,8 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 entityID: taskExist.id,
                 entityTitle: taskExist.title,
         })
+        emitSubtaskCreated(validBoardId, validTaskId, toSubtask(subTask))
+
         return success(
             subTask,
             "Created subtask successfully",

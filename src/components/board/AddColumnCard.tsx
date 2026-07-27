@@ -4,15 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as z from "zod";
-import { api } from '@/lib/fetch';
-import { boardKeys } from '@/lib/queryKeys';
-import { toast } from 'sonner';
+import { useCreateColumn } from '@/hooks/useColumns';
+import { columnSchema } from '@/schemas/boardSchema';
 
-export const columnSchema = z.object({
-  title: z.string().min(1).max(100).trim()
-});
+
 
 interface AddColumnCardProps {
   boardId: string;
@@ -29,10 +24,8 @@ export function AddColumnCard({ boardId, open, onOpenChange }: AddColumnCardProp
     else setInternalOpen(value);
   };
 
- 
 
   const [title, setTitle] = useState('');
-  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,22 +34,16 @@ export function AddColumnCard({ boardId, open, onOpenChange }: AddColumnCardProp
     }
   }, [isAdding]);
 
-  const mutation = useMutation({
-    mutationFn: (data: z.infer<typeof columnSchema>) =>
-      api.post(`/api/boards/${boardId}/columns`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: boardKeys.detail(boardId) });
-      setIsAdding(false);
-      setTitle('');
-      toast.success('Column created');
-    },
-    onError: () => toast.error('Failed to create column'),
-  });
+  
+  const { createColumn } = useCreateColumn(boardId);
 
   const handleSubmit = () => {
+    if (createColumn.isPending) return;
+    
     const parsed = columnSchema.safeParse({ title });
     if (!parsed.success) return;
-    mutation.mutate(parsed.data);
+
+    createColumn.mutate(parsed.data);
   };
 
   const handleCancel = () => {
@@ -81,17 +68,20 @@ export function AddColumnCard({ boardId, open, onOpenChange }: AddColumnCardProp
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={createColumn.isPending}
             placeholder="Column name"
             onKeyDown={(e) => {
+              if (createColumn.isPending) return;
+
               if (e.key === 'Enter') handleSubmit();
               if (e.key === 'Escape') handleCancel();
             }}
           />
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1" onClick={handleSubmit}>
-              Add column
+            <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={createColumn.isPending}>
+              {createColumn.isPending?"Adding...":"Add column"}
             </Button>
-            <Button size="sm" variant="outline" onClick={handleCancel} aria-label="Cancel">
+            <Button size="sm" variant="outline" onClick={handleCancel} disabled={createColumn.isPending} aria-label="Cancel">
               <X className="w-4 h-4" />
             </Button>
           </div>

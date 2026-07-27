@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, Trash2, UserPlus } from 'lucide-react';
+import { Loader2, Trash2, UserPlus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel, FieldError } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -16,32 +17,55 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMembers } from '@/hooks/useMembers';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useAddMember, useRemoveMember, useChangeRole } from '@/hooks/useMemberMutations';
-import { useDeleteBoard } from '@/hooks/useBoard';
-import { canChangeRole, canRemoveMember, canAddMember, canDeleteBoard } from '@/lib/rbac-client';
+import { useBoard, useDeleteBoard, useUpdateBoard } from '@/hooks/useBoard';
+import { canChangeRole, canRemoveMember, canAddMember, canDeleteBoard, canUpdateBoard } from '@/lib/rbac-client';
 import type { Role } from '@/types/api';
 import { toast } from 'sonner';
 
 export default function BoardSettingsPage() {
   const { boardId } = useParams<{ boardId: string }>();
+  const { data: board } = useBoard(boardId);
   const { data: currentUser } = useCurrentUser();
   const { data: members, isLoading } = useMembers(boardId);
   const addMember = useAddMember(boardId);
   const removeMember = useRemoveMember(boardId);
   const changeRole = useChangeRole(boardId);
   const deleteBoard = useDeleteBoard(boardId);
+  const updateBoard = useUpdateBoard(boardId);
 
   const [identifier, setIdentifier] = useState('');
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [descDraft, setDescDraft] = useState('');
+  const [prevBoardId, setPrevBoardId] = useState<string | undefined>(undefined);
+
+  if (board && prevBoardId !== board.id) {
+        setPrevBoardId(board.id);
+        setNameDraft(board.name);
+        setDescDraft(board.description ?? '');
+  }
 
   const myRole = members?.find((m) => m.userID === currentUser?.id)?.role as Role | undefined;
 
-  if (isLoading || !myRole) {
+  if (isLoading || !myRole || !board) {
     return (
       <div className="h-full flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
+  const isUnchanged = nameDraft === board.name && descDraft === (board.description ?? '');
+
+  const handleSaveBoard = () => {
+    updateBoard.mutate(
+      { name: nameDraft, description: descDraft || undefined },
+      {
+        onSuccess: () => toast.success('Board updated'),
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to update board'),
+      }
+    );
+  };
 
   const handleAdd = () => {
     if (!identifier.trim()) return;
@@ -51,7 +75,6 @@ export default function BoardSettingsPage() {
     });
   };
 
-  // identifier must be username/email — backend reuses addMemberSchema, not userID lookup
   const handleRemove = (username: string) => {
     removeMember.mutate(username, {
       onSuccess: () => toast.success('Member removed'),
@@ -76,6 +99,42 @@ export default function BoardSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <h1 className="text-h1 font-semibold text-foreground">Board Settings</h1>
+
+      {canUpdateBoard(myRole) ? (
+        <div className="space-y-3">
+          <h2 className="text-h2 font-medium text-foreground">Board details</h2>
+          <Field>
+            <FieldLabel htmlFor="board-name">Name</FieldLabel>
+            <input
+              id="board-name"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              maxLength={100}
+              className="w-full rounded-input border border-border bg-surface-elevated px-3 py-2 text-body text-foreground outline-none focus-visible:shadow-[var(--focus-ring)]"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="board-description">Description</FieldLabel>
+            <Textarea
+              id="board-description"
+              value={descDraft}
+              onChange={(e) => setDescDraft(e.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder="What's this board for?"
+            />
+          </Field>
+          <Button onClick={handleSaveBoard} disabled={isUnchanged || updateBoard.isPending} className="gap-1.5">
+            <Save className="w-4 h-4" />
+            {updateBoard.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <h2 className="text-h2 font-medium text-foreground">{board.name}</h2>
+          {board.description && <p className="text-body text-muted-foreground">{board.description}</p>}
+        </div>
+      )}
 
       {canAddMember(myRole) && (
         <Field>

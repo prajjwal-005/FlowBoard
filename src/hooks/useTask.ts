@@ -39,31 +39,36 @@ export function useUpdateTask(boardId: string, columnId: string, taskId: string)
     mutationFn: (data: UpdateTaskInput) =>
       api.patch(`/api/boards/${boardId}/columns/${columnId}/tasks/${taskId}`, data),
 
-    onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: boardKeys.detail(boardId) });
-      await queryClient.cancelQueries({ queryKey: ['boards', boardId, 'tasks', taskId] });
+   onMutate: async (data) => {
+  await queryClient.cancelQueries({ queryKey: boardKeys.detail(boardId) });
+  await queryClient.cancelQueries({ queryKey: ['boards', boardId, 'tasks', taskId] });
 
-      const previousBoard = queryClient.getQueryData<Board>(boardKeys.detail(boardId));
-      const previousTask = queryClient.getQueryData(['boards', boardId, 'tasks', taskId]);
+  const previousBoard = queryClient.getQueryData<Board>(boardKeys.detail(boardId));
+  const previousTask = queryClient.getQueryData(['boards', boardId, 'tasks', taskId]);
 
-      if (previousBoard) {
-        queryClient.setQueryData<Board>(boardKeys.detail(boardId), {
-          ...previousBoard,
-          columns: previousBoard.columns.map((c) =>
-            c.id === columnId
-              ? { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, ...data } : t)) }
-              : c
-          ),
-        });
-      }
+  const { dueDate, ...rest } = data;
+  const patch = {
+    ...rest,
+    ...(dueDate !== undefined && { dueDate: dueDate ? dueDate.toISOString() : null }),
+  };
 
-      if (previousTask) {
-        queryClient.setQueryData(['boards', boardId, 'tasks', taskId], { ...previousTask, ...data });
-      }
+  if (previousBoard) {
+    queryClient.setQueryData<Board>(boardKeys.detail(boardId), {
+      ...previousBoard,
+      columns: previousBoard.columns.map((c) =>
+        c.id === columnId
+          ? { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)) }
+          : c
+      ),
+    });
+  }
 
-      return { previousBoard, previousTask };
-    },
+  if (previousTask) {
+    queryClient.setQueryData(['boards', boardId, 'tasks', taskId], { ...previousTask, ...patch });
+  }
 
+  return { previousBoard, previousTask };
+},
     onError: (_err, _vars, context) => {
       if (context?.previousBoard) queryClient.setQueryData(boardKeys.detail(boardId), context.previousBoard);
       if (context?.previousTask) queryClient.setQueryData(['boards', boardId, 'tasks', taskId], context.previousTask);

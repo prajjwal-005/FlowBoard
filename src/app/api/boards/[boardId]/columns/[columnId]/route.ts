@@ -4,9 +4,9 @@ import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { NextRequest } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client"; 
-
 import * as z from "zod";
 import { logActivity } from "@/lib/activity";
+import { emitColumnDeleted, emitColumnRenamed } from "@/socket/emitters";
 const columnSchema  = z.object({
     title: z.string().min(1).max(100).trim(),
     order: z.number().nonnegative()
@@ -69,7 +69,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 "Forbidden",
                 403
             )
-        const updated_column = await prisma.column.update({
+        const updatedColumn = await prisma.column.update({
             where:{
                 id:validColumnId,
                 boardID:validBoardId,
@@ -86,11 +86,14 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
             actorUsername: session.username, 
             action: "COLUMN_RENAMED",
             entityType: "COLUMN",
-            entityID:  updated_column.id,
-            entityTitle: updated_column.title,
+            entityID:  updatedColumn.id,
+            entityTitle: updatedColumn.title,
         })
+        if (title !== undefined) {
+            emitColumnRenamed(validBoardId, validColumnId, updatedColumn.title)
+        }
         return success(
-            updated_column,
+            updatedColumn,
             "Updated column successfully",
             200
         )
@@ -172,14 +175,16 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
             "Column not found", 
             404
         );
-        await prisma.$transaction (async(tx) => {    
+          
             await prisma.column.delete({
                 where:{
                     id:validColumnId,
                     boardID:validBoardId,
                 }
             });
-            await logActivity({
+            
+        
+        await logActivity({
                 boardID: validBoardId,
                 userID: session.userID,
                 actorUsername: session.username, 
@@ -188,9 +193,8 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 entityID: validColumnId,
                 entityTitle: column.title,
             })
-        })
-
-        
+        emitColumnDeleted(validBoardId,validColumnId);   
+           
         return success(
             null,
             "Deleted column successfully",
