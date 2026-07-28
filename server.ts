@@ -13,10 +13,10 @@ app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
     handle(req, res)
   })
-  const io = initSocket(httpServer)
-  httpServer.listen(port, () => {
+    const io = initSocket(httpServer)
+    httpServer.listen(port, '0.0.0.0', () => {
     console.log(
-      `> Server listening at http://localhost:${port} as ${dev ? 'development' : process.env.NODE_ENV}`
+        `> Server listening on port ${port} as ${dev ? 'development' : process.env.NODE_ENV}`
     )
-  })
+})
 })

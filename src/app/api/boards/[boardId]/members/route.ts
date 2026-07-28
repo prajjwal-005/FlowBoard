@@ -403,7 +403,7 @@ export async function DELETE(request:NextRequest,{params}:{params :Promise<{boar
         createNotification({ userID: targetMember.userID, actorID: session.userID, type: "MEMBER_REMOVED", message: `Memebr Removed: ${targetUser.username}`, boardID: validBoardId, entityType: 'BOARD', entityID: validBoardId })
 
         return success(
-            [],
+            { userID: targetUser.id },
             "Deleted member successfully",
             200
         )

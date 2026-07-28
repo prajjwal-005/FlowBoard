@@ -28,8 +28,7 @@ export default function BoardSettingsPage() {
   
   const { boardId } = useParams<{ boardId: string }>();
   const { data: board } = useBoard(boardId);
-  useMemberEvents(boardId)
-  useBoardEvents(boardId) 
+  
   const { data: currentUser } = useCurrentUser();
   const { data: members, isLoading } = useMembers(boardId);
   const addMember = useAddMember(boardId);
@@ -43,7 +42,8 @@ export default function BoardSettingsPage() {
   const [nameDraft, setNameDraft] = useState('');
   const [descDraft, setDescDraft] = useState('');
   const [prevBoardId, setPrevBoardId] = useState<string | undefined>(undefined);
-
+  useMemberEvents(boardId)
+  useBoardEvents(boardId) 
   if (board && prevBoardId !== board.id) {
         setPrevBoardId(board.id);
         setNameDraft(board.name);

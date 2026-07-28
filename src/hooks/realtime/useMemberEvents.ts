@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { useSocket } from '@/components/RealtimeProvider'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import type { Member, Role } from '@/types/api'
+import { memberKeys } from '@/lib/queryKeys';
 
 export function useMemberEvents(boardId: string | undefined) {
   const { socket, isConnected } = useSocket()
@@ -17,7 +18,7 @@ export function useMemberEvents(boardId: string | undefined) {
   useEffect(() => {
     if (!boardId || !isConnected) return
 
-    const membersKey = ['boards', boardId, 'members']
+    const membersKey = memberKeys.list(boardId)
 
     function handleAdded(payload: { boardID: string; member: Member }) {
       queryClient.setQueryData<Member[]>(membersKey, (old) =>
