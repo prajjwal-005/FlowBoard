@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { toBoardBase } from "@/lib/socket/serialise";
 import { boardIdSchema } from "@/schemas/boardSchema";
+import { emitBoardUpdated } from "@/socket/emitters";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request:NextRequest,{params}:{params:Promise<{boardId:string}>}) {
@@ -112,8 +114,9 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{boardId
         const updated = await prisma.board.update({
             where: { id: validBoardId },
             data: { summary, summaryGeneratedAt: new Date() },
-            select: { summary: true, summaryGeneratedAt: true },
+            select:  {id: true, name: true, description: true, createdAt: true, updatedAt: true,summary: true, summaryGeneratedAt: true,}
         });
+        emitBoardUpdated(validBoardId, toBoardBase(updated))
         return success(
             updated,
             "successfully updated the board",

@@ -15,6 +15,7 @@ import {
   verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
+import { useUpdateComment } from '@/hooks/useComments';
 import { CSS } from '@dnd-kit/utilities';
 import { useBoard } from '@/hooks/useBoard';
 import { useTask } from '@/hooks/useTasks';
@@ -102,6 +103,8 @@ export default function BoardDetailPage() {
   const { mutate: deleteComment } = useDeleteComment(params.boardId, activeColumnId ?? "", selectedTaskId ?? "");
   const { mutate: addAssignee } = useAddAssignee(params.boardId, activeColumnId ?? "", selectedTaskId ?? "");
   const { mutate: removeAssignee } = useRemoveAssignee(params.boardId, activeColumnId ?? "", selectedTaskId ?? "");
+  const { mutate: updateComment } = useUpdateComment(params.boardId, activeColumnId ?? "", selectedTaskId ?? "");
+
   const {
     sensors,
     collisionDetection,
@@ -164,51 +167,69 @@ return (
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-start justify-between mb-6 shrink-0 gap-4">
-        <div className="min-w-0">
-            <h1 className="text-h1 font-semibold text-foreground tracking-tight">{board?.name}</h1>
-            <p className="text-body text-muted-foreground mt-1">{board?.description}</p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-            <PresenceStack boardId={params.boardId} />
-            <div className="flex items-center gap-2">
-            <Link href={`/boards/${params.boardId}/settings`}>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                <Settings className="w-3.5 h-3.5" />
-                Settings
-                </Button>
-            </Link>
-            <Link href={`/boards/${params.boardId}/activity`}>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                <History className="w-3.5 h-3.5" />
-                Activity
-                </Button>
-            </Link>
-            <BoardSummaryButton
-                summary={board?.summary ?? null}
-                summaryGeneratedAt={board?.summaryGeneratedAt ?? null}
-                isPending={generateSummary.isPending}
-                onGenerate={() =>
-                generateSummary.mutate(undefined, {
-                    onError: () => toast.error('Failed to generate board summary'),
-                })
-                }
-            />
-            {myRole && canCreateColumn(myRole) && (
-                <Button className="gap-2" onClick={() => setAddColumnOpen(true)}>
-                <Plus className="w-4 h-4" />
-                Add Column
-                </Button>
+     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        {/* Left side: title + description */}
+        <div className="min-w-0 flex-1">
+            <h1 className="text-3xl font-bold tracking-tight break-words">
+            {board?.name}
+            </h1>
+            {board?.description && (
+            <p className="mt-2 max-w-2xl text-sm sm:text-base text-muted-foreground break-words">
+                {board.description}
+            </p>
             )}
-            {myRole && (
-                <span className="text-caption font-medium text-muted-foreground bg-surface border border-border rounded-full px-2 py-0.5">
-                {myRole}
-                </span>
-            )}
-            </div>
         </div>
-        </div>
+
+
+  {/* Right side: presence + actions */}
+  <div className="flex flex-col gap-3 lg:items-end shrink-0">
+    <div className="flex justify-start lg:justify-end">
+      <PresenceStack boardId={params.boardId} />
+    </div>
+
+    <div className="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+      <Link href={`/boards/${params.boardId}/settings`}>
+        <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap">
+          <Settings className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Settings</span>
+        </Button>
+      </Link>
+
+      <Link href={`/boards/${params.boardId}/activity`}>
+        <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap">
+          <History className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Activity</span>
+        </Button>
+      </Link>
+
+      <BoardSummaryButton
+        summary={board?.summary ?? null}
+        summaryGeneratedAt={board?.summaryGeneratedAt ?? null}
+        isPending={generateSummary.isPending}
+        onGenerate={() =>
+          generateSummary.mutate(undefined, {
+            onError: () => toast.error("Failed to generate board summary"),
+          })
+        }
+      />
+
+      {myRole && canCreateColumn(myRole) && (
+        <Button className="gap-2 whitespace-nowrap" onClick={() => setAddColumnOpen(true)}>
+          <Plus className="w-4 h-4" />
+          <span>Add Column</span>
+        </Button>
+      )}
+
+      {myRole && (
+        <span className="text-caption font-medium text-muted-foreground bg-surface border border-border rounded-full px-2 py-0.5 whitespace-nowrap">
+          {myRole}
+        </span>
+      )}
+    </div>
+  </div>
+</div>
  
+<div className="mt-6 flex-1 min-h-0">
 
     <ErrorBoundary fallback={<div className="p-6 text-center text-muted-foreground">Board view crashed. Try refreshing.</div>}>
         <DndContext
@@ -249,6 +270,7 @@ return (
             </DragOverlay>
         </DndContext>
     </ErrorBoundary>
+    </div>
       {createTaskColumnId && (
         <CreateTaskModal
           open={!!createTaskColumnId}
@@ -276,6 +298,9 @@ return (
           currentUserID={currentUserID}
           canDeleteTask={canDeleteTask(myRole)}
           canDeleteComment={(c) => canDeleteComment(myRole, c, currentUserID)}
+          canEditComment={(c) => c.userID === currentUserID}
+          onRenameSubtask={(id, title) => toggleSubtask({ subtaskId: id, title })}
+          onUpdateComment={(id, content) => updateComment({ commentId: id, content })}
           onUpdateField={(field, value) => updateTask({ [field]: value })}
           onDeleteTask={() => deleteTask(selectedTaskId, { onSuccess: () => setSelectedTaskId(null) })}
           onAddSubtask={(title) => addSubtask({ title })}

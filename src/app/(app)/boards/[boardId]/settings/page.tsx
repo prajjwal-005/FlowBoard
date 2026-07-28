@@ -21,10 +21,15 @@ import { useBoard, useDeleteBoard, useUpdateBoard } from '@/hooks/useBoard';
 import { canChangeRole, canRemoveMember, canAddMember, canDeleteBoard, canUpdateBoard } from '@/lib/rbac-client';
 import type { Role } from '@/types/api';
 import { toast } from 'sonner';
+import { useMemberEvents } from '@/hooks/realtime/useMemberEvents';
+import { useBoardEvents } from '@/hooks/realtime/useBoardEvents';
 
 export default function BoardSettingsPage() {
+  
   const { boardId } = useParams<{ boardId: string }>();
   const { data: board } = useBoard(boardId);
+  useMemberEvents(boardId)
+  useBoardEvents(boardId) 
   const { data: currentUser } = useCurrentUser();
   const { data: members, isLoading } = useMembers(boardId);
   const addMember = useAddMember(boardId);

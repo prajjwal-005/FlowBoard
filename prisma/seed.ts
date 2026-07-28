@@ -141,6 +141,148 @@ async function main() {
       { title: 'Get sign-off', isCompleted: true, taskID: t6.id, createdByID: alice.id },
     ],
   });
+  await prisma.activityLog.createMany({
+  data: [
+    // Board setup
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "BOARD_CREATED",
+      entityType: "BOARD",
+      entityID: board1.id,
+      entityTitle: board1.name,
+    },
+
+    // Columns
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "COLUMN_CREATED",
+      entityType: "COLUMN",
+      entityID: b1Backlog.id,
+      entityTitle: b1Backlog.title,
+    },
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "COLUMN_CREATED",
+      entityType: "COLUMN",
+      entityID: b1InProgress.id,
+      entityTitle: b1InProgress.title,
+    },
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "COLUMN_CREATED",
+      entityType: "COLUMN",
+      entityID: b1Done.id,
+      entityTitle: b1Done.title,
+    },
+
+    // Tasks
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityID: t1.id,
+      entityTitle: t1.title,
+    },
+    {
+      boardID: board1.id,
+      userID: bob.id,
+      actorUsername: "bob",
+      action: "TASK_ASSIGNED",
+      entityType: "TASK",
+      entityID: t1.id,
+      entityTitle: t1.title,
+    },
+    {
+      boardID: board1.id,
+      userID: bob.id,
+      actorUsername: "bob",
+      action: "COMMENT_ADDED",
+      entityType: "TASK",
+      entityID: t1.id,
+      entityTitle: t1.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: bob.id,
+      actorUsername: "bob",
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityID: t2.id,
+      entityTitle: t2.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityID: t4.id,
+      entityTitle: t4.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: bob.id,
+      actorUsername: "bob",
+      action: "COMMENT_ADDED",
+      entityType: "TASK",
+      entityID: t4.id,
+      entityTitle: t4.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: bob.id,
+      actorUsername: "bob",
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityID: t5.id,
+      entityTitle: t5.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "TASK_CREATED",
+      entityType: "TASK",
+      entityID: t6.id,
+      entityTitle: t6.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "TASK_MOVED",
+      entityType: "TASK",
+      entityID: t6.id,
+      entityTitle: t6.title,
+    },
+
+    {
+      boardID: board1.id,
+      userID: alice.id,
+      actorUsername: "alice",
+      action: "SUBTASK_COMPLETED",
+      entityType: "TASK",
+      entityID: t6.id,
+      entityTitle: t6.title,
+    },
+  ],
+});
 
   // ── Board 2: Website Redesign — role mix flipped, tests per-board role resolution ──
   const board2 = await prisma.board.create({
