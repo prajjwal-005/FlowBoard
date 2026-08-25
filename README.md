@@ -2,8 +2,7 @@
 
 **FlowBoard** is a full-stack, real-time collaborative Kanban platform built to demonstrate production-grade patterns across authentication, role-based access control, real-time systems, and AI integration.
 
-Live demo: _add link_
-Video walkthrough: _add link_
+Live demo: https://flowboard-xe7g.onrender.com
 
 ---
 
@@ -51,7 +50,7 @@ Built as a portfolio project to go deep on things a typical CRUD app doesn't for
 | Auth | Custom JWT (`jose`), bcrypt, httpOnly cookies |
 | AI | OpenAI API |
 | Media | Cloudinary |
-| Infra | Docker (multi-stage build), GitHub Actions CI |
+| Infra | Docker (multi-stage build)|
 
 ---
 
@@ -73,208 +72,222 @@ All mutations go through standard REST API routes. Socket.IO never writes to the
 
 ```
 .
- └── src
- |   ├── app
- |   │   ├── (app)
- |   │   │   ├── boards
- |   │   │   │   └── [boardId]
- |   │   │   ├── dashboard
- |   │   │   │   ├── error.tsx
- |   │   │   │   ├── loading.tsx
- |   │   │   │   └── page.tsx
- |   │   │   ├── profile
- |   │   │   │   └── page.tsx
- |   │   │   └── layout.tsx
- |   │   ├── (auth)
- |   │   │   ├── login
- |   │   │   │   └── page.tsx
- |   │   │   ├── register
- |   │   │   │   └── page.tsx
- |   │   │   └── layout.tsx
- |   │   ├── api
- |   │   │   ├── auth
- |   │   │   │   └── refresh
- |   │   │   │       └── route.ts
- |   │   │   ├── boards
- |   │   │   │   └── [boardId]
- |   │   │   │       └── route.ts
- |   │   │   ├── login
- |   │   │   │   └── route.ts
- |   │   │   ├── logout
- |   │   │   │   └── route.ts
- |   │   │   ├── notifications
- |   │   │   │   └── [notificationId]
- |   │   │   │       └── route.ts
- |   │   │   ├── profile
- |   │   │   │   ├── avatar-signature
- |   │   │   │   │   └── route.ts
- |   │   │   │   └── route.ts
- |   │   │   └── register
- |   │   │       └── route.ts
- |   │   ├── favicon.ico
- |   │   ├── global.css
- |   │   ├── globals.css
- |   │   ├── layout.tsx
- |   │   └── page.tsx
- |   ├── components
- |   │   ├── activity
- |   │   │   └── ActivityFeed.tsx
- |   │   ├── ai
- |   │   │   └── BoardSummaryButton.tsx
- |   │   ├── board
- |   │   │   ├── AddColumnCard.tsx
- |   │   │   ├── AssigneeSelector.tsx
- |   │   │   ├── BoardCard.tsx
- |   │   │   ├── ColumnHeaderMenu.tsx
- |   │   │   ├── CreateBoardModal.tsx
- |   │   │   ├── CreateTaskModal.tsx
- |   │   │   ├── PresenceStack.tsx
- |   │   │   ├── ProfileForm.tsx
- |   │   │   ├── TaskCard.tsx
- |   │   │   └── TaskDetailModal.tsx
- |   │   ├── notifications
- |   │   │   └── NotificationBell.tsx
- |   │   ├── shared
- |   │   │   ├── CommandPalette.tsx
- |   │   │   ├── ErrorBoundary.tsx
- |   │   │   ├── Navbar.tsx
- |   │   │   ├── Sidebar.tsx
- |   │   │   ├── SkeletonCard.tsx
- |   │   │   └── UserAvatar.tsx
- |   │   ├── ui
- |   │   │   ├── alert-dialog.tsx
- |   │   │   ├── avatar.tsx
- |   │   │   ├── badge.tsx
- |   │   │   ├── button.tsx
- |   │   │   ├── card.tsx
- |   │   │   ├── command.tsx
- |   │   │   ├── dialog.tsx
- |   │   │   ├── dropdown-menu.tsx
- |   │   │   ├── field.tsx
- |   │   │   ├── input-group.tsx
- |   │   │   ├── input.tsx
- |   │   │   ├── label.tsx
- |   │   │   ├── popover.tsx
- |   │   │   ├── select.tsx
- |   │   │   ├── separator.tsx
- |   │   │   ├── sheet.tsx
- |   │   │   ├── sidebar.tsx
- |   │   │   ├── skeleton.tsx
- |   │   │   ├── sonner.tsx
- |   │   │   ├── textarea.tsx
- |   │   │   └── tooltip.tsx
- |   │   ├── providers.tsx
- |   │   └── RealtimeProvider.tsx
- |   ├── generated
- |   │   └── prisma
- |   │       ├── internal
- |   │       │   ├── class.ts
- |   │       │   ├── prismaNamespace.ts
- |   │       │   └── prismaNamespaceBrowser.ts
- |   │       ├── models
- |   │       │   ├── ActivityLog.ts
- |   │       │   ├── Board.ts
- |   │       │   ├── BoardMember.ts
- |   │       │   ├── Column.ts
- |   │       │   ├── Comment.ts
- |   │       │   ├── Notification.ts
- |   │       │   ├── RefreshToken.ts
- |   │       │   ├── Subtask.ts
- |   │       │   ├── Task.ts
- |   │       │   ├── TaskAssignee.ts
- |   │       │   └── User.ts
- |   │       ├── browser.ts
- |   │       ├── client.ts
- |   │       ├── commonInputTypes.ts
- |   │       ├── enums.ts
- |   │       └── models.ts
- |   ├── hooks
- |   │   ├── realtime
- |   │   │   ├── useAssigneeEvents.ts
- |   │   │   ├── useBoardEvents.ts
- |   │   │   ├── useBoardRoom.ts
- |   │   │   ├── useColumnEvents.ts
- |   │   │   ├── useCommentEvents.ts
- |   │   │   ├── useMemberEvents.ts
- |   │   │   ├── usePresence.ts
- |   │   │   ├── useSubtaskEvents.ts
- |   │   │   └── useTaskEvents.ts
- |   │   ├── use-mobile.ts
- |   │   ├── useActivity.ts
- |   │   ├── useAI.ts
- |   │   ├── useAssignees.ts
- |   │   ├── useAvatarUpload.tsx
- |   │   ├── useBoard.ts
- |   │   ├── useBoardDnd.ts
- |   │   ├── useBoards.ts
- |   │   ├── useColumns.ts
- |   │   ├── useCommandPaletteShortcut.ts
- |   │   ├── useComments.ts
- |   │   ├── useCurrentUser.ts
- |   │   ├── useMemberMutations.ts
- |   │   ├── useMembers.ts
- |   │   ├── useNotifications.ts
- |   │   ├── useSubtasks.ts
- |   │   ├── useTask.ts
- |   │   ├── useTasks.ts
- |   │   └── useUpdateProfile.ts
- |   ├── lib
- |   │   ├── socket
- |   │   │   └── serialise.ts
- |   │   ├── activity.ts
- |   │   ├── ai-prompts.ts
- |   │   ├── ai.ts
- |   │   ├── api.ts
- |   │   ├── cloudinary.ts
- |   │   ├── fetch.ts
- |   │   ├── notifications.ts
- |   │   ├── prisma.ts
- |   │   ├── queryKeys.ts
- |   │   ├── ratelimit.ts
- |   │   ├── rbac-client.ts
- |   │   ├── rbac.ts
- |   │   ├── redis.ts
- |   │   ├── session.ts
- |   │   ├── token.ts
- |   │   └── utils.ts
- |   ├── schemas
- |   │   ├── boardSchema.ts
- |   │   ├── loginSchema.ts
- |   │   ├── profileSchema.ts
- |   │   ├── registerSchema.ts
- |   │   └── taskSchema.ts
- |   ├── socket
- |   │   ├── events
- |   │   │   ├── connection.ts
- |   │   │   └── presence.ts
- |   │   ├── auth.ts
- |   │   ├── constants.ts
- |   │   ├── emitters.ts
- |   │   ├── index.ts
- |   │   ├── rooms.ts
- |   │   └── types.ts
- |   ├── store
- |   │   └── uiStore.tsx
- |   ├── types
- |   │   ├── api.ts
- |   │   ├── index.ts
- |   │   └── socket.ts
- |   └── proxy.ts
- ├── .dockerignore
- ├── .gitignore
- ├── components.json
- ├── docker-compose.yml
- ├── Dockerfile
- ├── eslint.config.mjs
- ├── next-env.d.ts
- ├── next.config.ts
- ├── package-lock.json
- ├── package.json
- ├── postcss.config.mjs
- ├── prisma.config.ts
- ├── README.md
- ├── server.ts
- └── tsconfig.json
+src/
+├── proxy.ts
+├── app/
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── (app)/
+│   │   ├── layout.tsx
+│   │   ├── boards/
+│   │   │   └── [boardId]/
+│   │   │       ├── error.tsx
+│   │   │       ├── loading.tsx
+│   │   │       ├── page.tsx
+│   │   │       ├── activity/
+│   │   │       │   └── page.tsx
+│   │   │       └── settings/
+│   │   │           └── page.tsx
+│   │   ├── dashboard/
+│   │   │   ├── error.tsx
+│   │   │   ├── loading.tsx
+│   │   │   └── page.tsx
+│   │   └── profile/
+│   │       └── page.tsx
+│   ├── (auth)/
+│   │   ├── layout.tsx
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   └── register/
+│   │       └── page.tsx
+│   └── api/
+│       ├── auth/
+│       │   └── refresh/
+│       │       └── route.ts
+│       ├── boards/
+│       │   ├── route.ts
+│       │   └── [boardId]/
+│       │       ├── route.ts
+│       │       ├── activity/
+│       │       │   └── route.ts
+│       │       ├── members/
+│       │       │   └── route.ts
+│       │       ├── summary/
+│       │       │   └── generate/
+│       │       │       └── route.ts
+│       │       └── columns/
+│       │           ├── route.ts
+│       │           ├── reorder/
+│       │           │   └── route.ts
+│       │           └── [columnId]/
+│       │               ├── route.ts
+│       │               └── tasks/
+│       │                   ├── route.ts
+│       │                   ├── reorder/
+│       │                   │   └── route.ts
+│       │                   └── [taskId]/
+│       │                       ├── route.ts
+│       │                       ├── assignees/
+│       │                       │   └── route.ts
+│       │                       ├── comments/
+│       │                       │   ├── route.ts
+│       │                       │   └── [commentId]/
+│       │                       │       └── route.ts
+│       │                       ├── description/
+│       │                       │   └── expand/
+│       │                       │       └── route.ts
+│       │                       └── subtasks/
+│       │                           ├── route.ts
+│       │                           ├── generate/
+│       │                           │   └── route.ts
+│       │                           └── [subtaskId]/
+│       │                               └── route.ts
+│       ├── health/
+│       │   └── route.ts
+│       ├── login/
+│       │   └── route.ts
+│       ├── logout/
+│       │   └── route.ts
+│       ├── notifications/
+│       │   ├── route.ts
+│       │   └── [notificationId]/
+│       │       └── route.ts
+│       ├── profile/
+│       │   ├── route.ts
+│       │   └── avatar-signature/
+│       │       └── route.ts
+│       └── register/
+│           └── route.ts
+│
+├── components/
+│   ├── providers.tsx
+│   ├── RealtimeProvider.tsx
+│   ├── activity/
+│   │   └── ActivityFeed.tsx
+│   ├── ai/
+│   │   └── BoardSummaryButton.tsx
+│   ├── board/
+│   │   ├── AddColumnCard.tsx
+│   │   ├── AssigneeSelector.tsx
+│   │   ├── BoardCard.tsx
+│   │   ├── ColumnHeaderMenu.tsx
+│   │   ├── CreateBoardModal.tsx
+│   │   ├── CreateTaskModal.tsx
+│   │   ├── PresenceStack.tsx
+│   │   ├── ProfileForm.tsx
+│   │   ├── TaskCard.tsx
+│   │   └── TaskDetailModal.tsx
+│   ├── notifications/
+│   │   └── NotificationBell.tsx
+│   ├── shared/
+│   │   ├── CommandPalette.tsx
+│   │   ├── ErrorBoundary.tsx
+│   │   ├── Navbar.tsx
+│   │   ├── Sidebar.tsx
+│   │   ├── SkeletonCard.tsx
+│   │   └── UserAvatar.tsx
+│   └── ui/
+│       ├── alert-dialog.tsx
+│       ├── avatar.tsx
+│       ├── badge.tsx
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── command.tsx
+│       ├── dialog.tsx
+│       ├── dropdown-menu.tsx
+│       ├── field.tsx
+│       ├── input-group.tsx
+│       ├── input.tsx
+│       ├── label.tsx
+│       ├── popover.tsx
+│       ├── select.tsx
+│       ├── separator.tsx
+│       ├── sheet.tsx
+│       ├── sidebar.tsx
+│       ├── skeleton.tsx
+│       ├── sonner.tsx
+│       ├── textarea.tsx
+│       └── tooltip.tsx
+│
+├── hooks/
+│   ├── use-mobile.ts
+│   ├── useActivity.ts
+│   ├── useAI.ts
+│   ├── useAssignees.ts
+│   ├── useAvatarUpload.tsx
+│   ├── useBoard.ts
+│   ├── useBoardDnd.ts
+│   ├── useBoards.ts
+│   ├── useColumns.ts
+│   ├── useCommandPaletteShortcut.ts
+│   ├── useComments.ts
+│   ├── useCurrentUser.ts
+│   ├── useMemberMutations.ts
+│   ├── useMembers.ts
+│   ├── useNotifications.ts
+│   ├── useSubtasks.ts
+│   ├── useTask.ts
+│   ├── useTasks.ts
+│   ├── useUpdateProfile.ts
+│   └── realtime/
+│       ├── useAssigneeEvents.ts
+│       ├── useBoardEvents.ts
+│       ├── useBoardRoom.ts
+│       ├── useColumnEvents.ts
+│       ├── useCommentEvents.ts
+│       ├── useMemberEvents.ts
+│       ├── usePresence.ts
+│       ├── useSubtaskEvents.ts
+│       └── useTaskEvents.ts
+│
+├── lib/
+│   ├── activity.ts
+│   ├── ai-prompts.ts
+│   ├── ai.ts
+│   ├── api.ts
+│   ├── cloudinary.ts
+│   ├── fetch.ts
+│   ├── notifications.ts
+│   ├── prisma.ts
+│   ├── queryKeys.ts
+│   ├── ratelimit.ts
+│   ├── rbac-client.ts
+│   ├── rbac.ts
+│   ├── redis.ts
+│   ├── session.ts
+│   ├── token.ts
+│   ├── utils.ts
+│   └── socket/
+│       └── serialise.ts
+│
+├── schemas/
+│   ├── boardSchema.ts
+│   ├── loginSchema.ts
+│   ├── profileSchema.ts
+│   ├── registerSchema.ts
+│   └── taskSchema.ts
+│
+├── socket/
+│   ├── auth.ts
+│   ├── constants.ts
+│   ├── emitters.ts
+│   ├── index.ts
+│   ├── rooms.ts
+│   ├── types.ts
+│   └── events/
+│       ├── connection.ts
+│       └── presence.ts
+│
+├── store/
+│   └── uiStore.ts
+│
+└── types/
+    ├── api.ts
+    ├── index.ts
+    └── socket.ts
+
 ```
 
 ---
