@@ -2,6 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { verifyAccessToken } from "@/lib/token";
 import { Button } from "@/components/ui/button";
+import { LayoutGrid, ListChecks, UserPlus, Radio } from "lucide-react";
+import { LiveBoardPreview } from "@/components/LiveBoardPreview";
 
 export default async function RootPage() {
   const cookieStore = await cookies();
@@ -61,56 +63,93 @@ export default async function RootPage() {
             )}
           </div>
 
-          {/* Minimal board mock */}
-          <div className="mt-16 grid grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
-            {[
-              { title: "Backlog", cards: ["Design review", "API cleanup"] },
-              { title: "In progress", cards: ["Realtime sync"] },
-              { title: "Done", cards: ["Auth flow", "Board CRUD"] },
-            ].map((col) => (
-              <div
-                key={col.title}
-                className="bg-surface rounded-card p-3 border border-border"
-              >
-                <p className="text-caption font-medium text-muted-foreground mb-2">
-                  {col.title}
-                </p>
-                <div className="flex flex-col gap-2">
-                  {col.cards.map((card) => (
-                    <div
-                      key={card}
-                      className="bg-surface-elevated rounded-md px-3 py-2 text-caption shadow-sm border border-border"
-                    >
-                      {card}
-                    </div>
-                  ))}
+          {/* Live board preview */}
+          <div className="mt-16">
+            <LiveBoardPreview />
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-5xl px-6 py-16">
+            <p className="text-caption font-medium text-muted-foreground text-center mb-10">
+              How it works
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-8">
+              {[
+                {
+                  n: "01",
+                  icon: LayoutGrid,
+                  title: "Create a board",
+                  copy: "Start one per project or team. You're the owner by default.",
+                },
+                {
+                  n: "02",
+                  icon: ListChecks,
+                  title: "Add columns & tasks",
+                  copy: "Shape your workflow into stages, then break work into tasks and subtasks.",
+                },
+                {
+                  n: "03",
+                  icon: UserPlus,
+                  title: "Bring in your team",
+                  copy: "Invite members and assign roles — owner, admin, member, or viewer.",
+                },
+                {
+                  n: "04",
+                  icon: Radio,
+                  title: "Watch it update live",
+                  copy: "Every move, comment, and assignment syncs instantly for everyone on the board.",
+                },
+              ].map(({ n, icon: Icon, title, copy }) => (
+                <div key={n} className="relative">
+                  <span className="text-caption font-mono text-muted-foreground">
+                    {n}
+                  </span>
+                  <div className="mt-3 w-9 h-9 rounded-md bg-surface border border-border flex items-center justify-center">
+                    <Icon className="w-4 h-4 text-primary" strokeWidth={2} />
+                  </div>
+                  <p className="text-h3 font-medium mt-4">{title}</p>
+                  <p className="text-caption text-muted-foreground mt-1">{copy}</p>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
 
         {/* Feature row */}
         <section className="border-t border-border">
           <div className="mx-auto max-w-5xl px-6 py-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div>
-              <p className="text-h3 font-medium">Real-time sync</p>
-              <p className="text-caption text-muted-foreground mt-1">
-                Every move, comment, and update appears live for the whole team.
-              </p>
-            </div>
-            <div>
-              <p className="text-h3 font-medium">Role-based access</p>
-              <p className="text-caption text-muted-foreground mt-1">
-                Owners, admins, members, and viewers each see the right controls.
-              </p>
-            </div>
-            <div>
-              <p className="text-h3 font-medium">AI-assisted planning</p>
-              <p className="text-caption text-muted-foreground mt-1">
-                Get subtask suggestions so boards stay organized with less setup.
-              </p>
-            </div>
+            {[
+              {
+                icon: Radio,
+                title: "Real-time sync",
+                copy: "Every move, comment, and update appears live for the whole team.",
+                tint: "bg-info-subtle text-info",
+              },
+              {
+                icon: UserPlus,
+                title: "Role-based access",
+                copy: "Owners, admins, members, and viewers each see the right controls.",
+                tint: "bg-warning-subtle text-warning",
+              },
+              {
+                icon: ListChecks,
+                title: "AI-assisted planning",
+                copy: "Get subtask suggestions so boards stay organized with less setup.",
+                tint: "bg-success-subtle text-success",
+              },
+            ].map(({ icon: Icon, title, copy, tint }) => (
+              <div key={title}>
+                <div
+                  className={`w-9 h-9 rounded-md flex items-center justify-center ${tint}`}
+                >
+                  <Icon className="w-4 h-4" strokeWidth={2} />
+                </div>
+                <p className="text-h3 font-medium mt-3">{title}</p>
+                <p className="text-caption text-muted-foreground mt-1">{copy}</p>
+              </div>
+            ))}
           </div>
         </section>
       </main>
