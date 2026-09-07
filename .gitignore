@@ -47,3 +47,6 @@ CODEBASE2.md
 flowboard-phase3-qa-checklist.md
 foundation.md
 bugrport.md
+benchmark-ratelimit-load.sh
+benchmark-ratelimit.mjs
+benchmark-socketio.mjs
