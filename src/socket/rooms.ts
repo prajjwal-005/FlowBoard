@@ -15,7 +15,7 @@ export function joinBoard(socket:TypedSocket, boardId:string) {
         boardID:boardId,
         onlineUsers:getBoardPresence(boardId),
     })
-    console.log(`${socket.data.username} joined ${boardRoom(boardId)}`)
+    //console.log(`${socket.data.username} joined ${boardRoom(boardId)}`)
 }
 export function leaveBoard(socket:TypedSocket, boardId:string) {
     
@@ -28,5 +28,5 @@ export function leaveBoard(socket:TypedSocket, boardId:string) {
         onlineUsers:getBoardPresence(boardId),
     }
   );
-    console.log(`${socket.data.username} left ${boardRoom(boardId)}`)
+    //console.log(`${socket.data.username} left ${boardRoom(boardId)}`)
 }

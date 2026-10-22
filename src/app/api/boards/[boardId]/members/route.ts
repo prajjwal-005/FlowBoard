@@ -97,7 +97,7 @@ export async function POST(request:NextRequest,{params}:{params :Promise<{boardI
                     "Invalid",
                     401
                 )
-            const body = await request.json(); 
+            const body = await request.json().catch(() => null); 
             const parsedBody = addMemberSchema.safeParse(body);
             
             if(!parsedBody.success) 
@@ -195,7 +195,7 @@ export async function PATCH(request:NextRequest,{params}:{params :Promise<{board
                 "Invalid",
                 401
             )
-        const body = await request.json(); 
+        const body = await request.json().catch(() => null); 
         const parsedBody = updateRoleSchema.safeParse(body);
         
         if(!parsedBody.success) 
@@ -311,7 +311,7 @@ export async function DELETE(request:NextRequest,{params}:{params :Promise<{boar
                 "Invalid",
                 401
             )
-        const body = await request.json(); 
+        const body = await request.json().catch(() => null); 
         const parsedBody = addMemberSchema.safeParse(body);
         
         if(!parsedBody.success) 

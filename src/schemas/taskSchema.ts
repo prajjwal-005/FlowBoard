@@ -76,32 +76,34 @@ export type AssigneeInput = z.infer<typeof AssigneeSchema>;
 
 // Base fields
 const subtaskFields = {
-  title: z.string({ error: "Title is required" })
+  title: z
+    .string({ error: "Title is required" })
     .trim()
     .min(1, { error: "Title cannot be empty" })
     .max(200, { error: "Title must be under 200 characters" }),
-  isCompleted: z.boolean().default(false),
+  isCompleted: z.boolean(),
 };
-
-// POST Schema (Only requires title)
+// POST Schema (Only requires title; or add default here if needed during creation)
 export const CreateSubtaskSchema = z.object({
   title: subtaskFields.title,
+  isCompleted: subtaskFields.isCompleted.default(false),
 });
 
-// PATCH Schema (Both optional, but at least one must be sent)
-export const UpdateSubtaskSchema = z.object({
-  title: subtaskFields.title.optional(),
-  isCompleted: subtaskFields.isCompleted.optional(),
-}).refine(
-  (data) => data.title !== undefined || data.isCompleted !== undefined,
-  {
-    error: "You must provide either 'title' or 'isCompleted' to update.",
-    path: [], // Sets the error at the root level of the object
-  }
-);
+// PATCH Schema (Both purely optional with no default fallback)
+export const UpdateSubtaskSchema = z
+  .object({
+    title: subtaskFields.title.optional(),
+    isCompleted: subtaskFields.isCompleted.optional(),
+  })
+  .refine(
+    (data) => data.title !== undefined || data.isCompleted !== undefined,
+    {
+      error: "You must provide either 'title' or 'isCompleted' to update.",
+      path: [],
+    }
+  );
 
 export type CreateSubtaskInput = z.infer<typeof CreateSubtaskSchema>;
 export type UpdateSubtaskInput = z.infer<typeof UpdateSubtaskSchema>;
-
 export const boardColumnTaskIdSchema = z.uuid();
 

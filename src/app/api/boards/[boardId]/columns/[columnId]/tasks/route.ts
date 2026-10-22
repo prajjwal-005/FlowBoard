@@ -29,7 +29,7 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
             )
         const validBoardId = parseBoardId.data;
         const validColumnId = parseColumnId.data;
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = CreateTaskSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(

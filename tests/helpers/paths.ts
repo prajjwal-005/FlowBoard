@@ -1,0 +1,11 @@
+export const boardsUrl = "/api/boards";
+export const boardUrl = (b: string) => `/api/boards/${b}`;
+export const columnsUrl = (b: string) => `${boardUrl(b)}/columns`;
+export const columnUrl = (b: string, c: string) => `${columnsUrl(b)}/${c}`;
+export const tasksUrl = (b: string, c: string) => `${columnUrl(b, c)}/tasks`;
+export const taskUrl = (b: string, c: string, t: string) => `${tasksUrl(b, c)}/${t}`;
+export const assigneesUrl = (b: string, c: string, t: string) => `${taskUrl(b, c, t)}/assignees`;
+export const subtasksUrl = (b: string, c: string, t: string) => `${taskUrl(b, c, t)}/subtasks`;
+export const subtaskUrl = (b: string, c: string, t: string, s: string) => `${subtasksUrl(b, c, t)}/${s}`;
+export const commentsUrl = (b: string, c: string, t: string) => `${taskUrl(b, c, t)}/comments`;
+export const commentUrl = (b: string, c: string, t: string, m: string) => `${commentsUrl(b, c, t)}/${m}`;

@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
             401
         );
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
     const parsed = updateProfileSchema.safeParse(body);
     if (!parsed.success)
         return failure(

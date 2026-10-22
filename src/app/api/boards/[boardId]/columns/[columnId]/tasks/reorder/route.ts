@@ -72,7 +72,7 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
         );
 
     const { boardId,columnId } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
 
     const parseBoardId  =  z.uuid().safeParse(boardId);
     const parseColumnId = z.uuid().safeParse(columnId);

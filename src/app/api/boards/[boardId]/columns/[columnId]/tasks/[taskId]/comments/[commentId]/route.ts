@@ -34,7 +34,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
         const validColumnId  = parseColumnId.data;
         const validTaskId    = parseTaskId.data;
         const validCommentId = parseCommentId.data;
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = UpdateCommentSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(
@@ -57,7 +57,18 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
                 403
             )
         
-        
+        const taskExist = await prisma.task.findUnique({
+            where: { 
+                id: validTaskId, 
+                columnID: validColumnId, 
+                boardID: validBoardId 
+            },
+        });
+        if (!taskExist) 
+            return failure(
+                    "No task exist", 
+                    404
+            );
         const comment = await prisma.comment.findUnique({
             where:{
                 id:     validCommentId,
@@ -84,6 +95,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
             where: {
                 id:     validCommentId,
                 taskID: validTaskId,
+                
                 userID: member.userID
                 },
             data:{
@@ -139,8 +151,9 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 400
             )
         const validBoardId   = parseBoardId.data;
-        const validTaskId    = parseTaskId.data
-        const validCommentId = parseCommentId.data
+        const validColumnId  = parseColumnId.data;
+        const validTaskId    = parseTaskId.data;
+        const validCommentId = parseCommentId.data;
         
         const member = await prisma.boardMember.findUnique({
             where:{
@@ -155,7 +168,18 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 "not Authorised",
                 403
             )
-        
+        const taskExist = await prisma.task.findUnique({
+            where: { 
+                id: validTaskId, 
+                columnID: validColumnId, 
+                boardID: validBoardId 
+            },
+        });
+        if (!taskExist) 
+            return failure(
+                    "No task exist", 
+                    404
+            );
         const comment = await prisma.comment.findUnique({
             where:{
                 id:     validCommentId,

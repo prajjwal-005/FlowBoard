@@ -53,9 +53,9 @@ model RefreshToken {
     tokenHash  String       @unique
     user       User         @relation(fields: [userID], references: [id],onDelete: Cascade)
     userID     String
+    consumedAt DateTime?
     expiresAt  DateTime
     createdAt  DateTime     @default(now())
-  
 }
 model Board{
     id	            String     @id  @default(uuid())

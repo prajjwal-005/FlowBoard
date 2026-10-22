@@ -11,16 +11,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { loginSchema } from '@/schemas/loginSchema';
 import { useQueryClient } from '@tanstack/react-query';
+import { refreshSession } from '@/lib/fetch'; // use the real path of fetch.ts
+import { safeNextPath } from '@/lib/safe-next-path';
 
-
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNextPath(searchParams.get('next'));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const form = useForm<z.input<typeof loginSchema>>({
@@ -30,6 +33,14 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  // Users arriving from another site carry no cookies (SameSite=Strict).
+  // This request is same-site, so it can restore a still-valid session.
+  useEffect(() => {
+    refreshSession().then((outcome) => {
+      if (outcome === 'ok') router.replace(next);
+    });
+  }, [router, next]);
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
@@ -47,7 +58,7 @@ export default function LoginPage() {
 
       toast.success('Welcome back!');
       queryClient.clear();
-      router.push('/dashboard');
+      router.push(next);
     } catch (error) {
       toast.error('Login failed', {
         description:
@@ -143,5 +154,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

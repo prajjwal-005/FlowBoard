@@ -1,94 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  AccessTokenPayload,
-  generateAccessToken,
-  generateRefreshToken,
-  hashToken,
-} from "@/lib/token";
-import { prisma } from "@/lib/prisma";
 import { failure } from "@/lib/api";
-const ALLOWED_REDIRECT_PATHS = /^\/[a-zA-Z0-9\-_/?=&]*$/; // relative paths only
+import { safeNextPath } from "@/lib/safe-next-path";
+import { rotateRefreshSession } from "@/lib/auth/refresh-session";
+import { clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
+import { loginRedirect } from "@/lib/auth/login-redirect";
 
+const MAX_RACE_RETRIES = 2;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function unauthorizedResponse() {
+  const response = NextResponse.json(
+    { error: "Invalid or expired session" },
+    { status: 401 }
+  );
+  clearAuthCookies(response);
+  return response;
+}
+
+// Deliberately sets no cookies: the winning request's response carries them.
+function refreshInProgressResponse() {
+  return NextResponse.json(
+    { error: "Session refresh in progress" },
+    { status: 409 }
+  );
+}
 
 export async function GET(request: NextRequest) {
-try {  
+  try {
+    const params = request.nextUrl.searchParams;
+    const next = safeNextPath(params.get("next"));
     const refreshToken = request.cookies.get("refreshToken")?.value;
 
-    if (!refreshToken) {
-        return NextResponse.redirect(new URL("/login", request.url));
+    // Nothing was sent, so there is nothing to clear.
+    if (!refreshToken) return loginRedirect(request, next, false);
+
+    const result = await rotateRefreshSession(refreshToken);
+    if (result.status === "invalid") return loginRedirect(request, next);
+
+    if (result.status === "raced") {
+      const attempt = Math.max(0, Number(params.get("attempt")) || 0);
+      // Out of retries: go to login but leave the cookies alone.
+      if (attempt >= MAX_RACE_RETRIES) return loginRedirect(request, next, false);
+
+      await sleep(150 * (attempt + 1)); // let the winner's Set-Cookie land
+      const retryUrl = new URL("/api/auth/refresh", request.url);
+      retryUrl.searchParams.set("next", next);
+      retryUrl.searchParams.set("attempt", String(attempt + 1));
+      return NextResponse.redirect(retryUrl);
     }
 
-    const hashedRefreshToken = hashToken(refreshToken);
-    const tokenRecord = await prisma.refreshToken.findUnique({
-        where: { tokenHash: hashedRefreshToken },
-    });
-
-    if (!tokenRecord) {
-        return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // Check expiry before user lookup — avoids wasted DB round-trip on expired tokens
-    if (tokenRecord.expiresAt < new Date()) {
-        await prisma.refreshToken.delete({ where: { id: tokenRecord.id } });
-        return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    const user = await prisma.user.findUnique({
-        where: { id: tokenRecord.userID },
-    });
-
-    if (!user) {
-        return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // Atomic token rotation
-    const newRefreshToken = generateRefreshToken();
-    const newHashedRefreshToken = hashToken(newRefreshToken);
-
-    await prisma.$transaction([
-        prisma.refreshToken.delete({ where: { id: tokenRecord.id } }),
-        prisma.refreshToken.create({
-        data: {
-            tokenHash: newHashedRefreshToken,
-            userID: user.id,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-        }),
-    ]);
-
-    const payload: AccessTokenPayload = { userID: user.id, email: user.email,username:user.username };
-    const newAccessToken = await generateAccessToken(payload);
-
-    // Validate ?next to prevent open redirect
-    const nextParam = request.nextUrl.searchParams.get("next") || "/dashboard";
-    const safeNext = ALLOWED_REDIRECT_PATHS.test(nextParam) ? nextParam : "/dashboard";
-
-    const response = NextResponse.redirect(new URL(safeNext, request.url));
-
-    response.cookies.set(
-                            "accessToken", 
-                            newAccessToken, 
-                            {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === "production",
-                                sameSite: "strict" as const,
-                                maxAge:60*60
-                            }                             
-                        );
-    response.cookies.set(
-                            "refreshToken", 
-                            newRefreshToken, 
-                            {
-                                httpOnly: true,
-                                secure: process.env.NODE_ENV === "production",
-                                sameSite: "strict" as const,
-                                maxAge:7 * 24 * 60 * 60
-                            }  
-                            );
-
+    const response = NextResponse.redirect(new URL(next, request.url));
+    setAuthCookies(response, result);
     return response;
+  } catch (error) {
+    return failure("Error refreshing session", 500, error);
+  }
 }
-  catch (error) {
-    return failure("Error refreshing session", 500, error)
-}
+
+export async function POST(request: NextRequest) {
+  try {
+    const refreshToken = request.cookies.get("refreshToken")?.value;
+    if (!refreshToken) return unauthorizedResponse();
+
+    const result = await rotateRefreshSession(refreshToken);
+    if (result.status === "invalid") return unauthorizedResponse();
+    if (result.status === "raced") return refreshInProgressResponse();
+
+    const response = NextResponse.json({ success: true }, { status: 200 });
+    setAuthCookies(response, result);
+    return response;
+  } catch (error) {
+    return failure("Error refreshing session", 500, error);
+  }
 }

@@ -3,15 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { NextRequest } from "next/server";
-import { boardIdSchema } from "@/schemas/boardSchema";
+import { boardIdSchema, columnSchema } from "@/schemas/boardSchema";
 import * as z from "zod";
 import { logActivity } from "@/lib/activity";
 import { emitColumnCreated } from "@/socket/emitters";
 import { toColumnBase } from "@/lib/socket/serialise";
 
-export const columnSchema  = z.object({
-    title: z.string().min(1).max(100).trim()
-});
+
 
 export async function POST(request:NextRequest,{params}:{params:Promise<{boardId:string}>}) {
     try {                                       
@@ -28,7 +26,7 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{boardId
             "Invalid Input",
             400
         )
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = columnSchema.safeParse(body);
         if(!parsedBody.success) 
         return failure(

@@ -3,10 +3,40 @@ import { toast } from "sonner"
 type FetchOptions = RequestInit & {
     params?: Record<string, string>
 }
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+export type RefreshOutcome = "ok" | "unauthenticated" | "error"
+
+// Every request that hits a 401 at the same moment shares one refresh call.
+let refreshing: Promise<RefreshOutcome> | null = null
+
+export function refreshSession(): Promise<RefreshOutcome> {
+    refreshing ??= (async (): Promise<RefreshOutcome> => {
+        try {
+            // Raw fetch on purpose: going through `api` would recurse on a 401.
+            const res = await fetch("/api/auth/refresh", {
+                method: "POST",
+                credentials: "include",
+            })
+            if (res.ok) return "ok"
+            if (res.status === 409) {
+                // Another tab or request just rotated; its cookies are on the way.
+                await sleep(250)
+                return "ok"
+            }
+            return res.status === 401 ? "unauthenticated" : "error"
+        } catch {
+            return "error"
+        }
+    })().finally(() => {
+        refreshing = null
+    })
+    return refreshing
+}
 async function fetchClient<T>(
     endpoint: string,
-    options: FetchOptions = {}
+    options: FetchOptions = {},
+    retried = false
 ): Promise<T> {
     const { params, ...init } = options
     const isServer = typeof window === "undefined"
@@ -36,10 +66,14 @@ async function fetchClient<T>(
     if (response.status === 401) {
         if (isServer) {
             redirect("/login")
-        } else {
-            window.location.href = "/login"
-            throw new Error("Unauthenticated")
         }
+        if (!retried) {
+            const outcome = await refreshSession()
+            if (outcome === "ok") return fetchClient<T>(endpoint, options, true)
+            if (outcome === "error") throw new Error("Could not refresh session")
+        }
+        window.location.href = "/login"
+        throw new Error("Unauthenticated")
     }
     if(response.status === 429){
         if(!isServer){

@@ -6,107 +6,70 @@ import { registerSchema } from "@/schemas/registerSchema";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import bcrypt from "bcryptjs";
 import { NextRequest } from "next/server";
-
+import { setAuthCookies } from "@/lib/auth/auth-cookies";
+import { BCRYPT_ROUNDS, REFRESH_TOKEN_TTL_MS } from "@/lib/auth/constants";
 
 export async function POST(request: NextRequest) {
-    try {   
+  try {
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
-    const {allowed,remaining, resetAt} =  await checkRateLimit(
-        `ratelimit:register:${ip}`,
-        5,
-        60
-    )
+    const { allowed, remaining, resetAt } = await checkRateLimit(
+      `ratelimit:register:${ip}`,
+      5,
+      60
+    );
     if (!allowed) {
-        return failure("Too many login attempts. Try again later.", 429);
+      return failure("Too many Register attempts. Try again later.", 429);
     }
-    const body = await request.json();
-    const parsed = registerSchema.safeParse(body);
 
+    const body = await request.json().catch(() => null);
+    const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-    return failure("Invalid input", 400);
+      return failure("Invalid input", 400);
     }
 
     const user = parsed.data;
-    const existingUsername = await prisma.user.findUnique({
-        where:{
-            username: user.username,
-     }
-    })
 
-    if(existingUsername){
-        return failure(
-            "Username already exist",
-            400
-        )
+    if (await prisma.user.findUnique({ where: { username: user.username } })) {
+      return failure("Username already exists", 409);
+    }
+    if (await prisma.user.findUnique({ where: { email: user.email } })) {
+      return failure("Email already exists", 409);
     }
 
-    const existingUserByEmail = await prisma.user.findUnique({
-        where:{
-            email:user.email
-        }
-    })
-    if(existingUserByEmail){
-        return failure(
-            "Email already exist"
-            ,400
-        )
-    }
-    const hashedPassword = await bcrypt.hash(user.password,10)
-
+    const passwordHash = await bcrypt.hash(user.password, BCRYPT_ROUNDS);
     const newUser = await prisma.user.create({
-        data:{
-            username : user.username,
-            email: user.email,
-            passwordHash:hashedPassword
-        }
-    })
-       
-    console.log(newUser.id);
+      data: { username: user.username, email: user.email, passwordHash },
+    });
 
-    const accessToken = await generateAccessToken({ userID: newUser.id, email: newUser.email, username:newUser.username });
+    const accessToken = await generateAccessToken({
+      userID: newUser.id,
+      email: newUser.email,
+      username: newUser.username,
+    });
     const refreshToken = generateRefreshToken();
-    const hashedRefreshToken = hashToken(refreshToken);
+    const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
     await prisma.refreshToken.create({
-    data: {
-        tokenHash: hashedRefreshToken,
+      data: {
+        tokenHash: hashToken(refreshToken),
         userID: newUser.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
+        expiresAt: refreshExpiresAt,
+      },
     });
 
     const response = success(
-    { id: newUser.id, username: newUser.username, email: newUser.email },
-    "User registered successfully",
-    201
+      { id: newUser.id, username: newUser.username, email: newUser.email },
+      "User registered successfully",
+      201
     );
-
-    response.cookies.set(
-        "accessToken", 
-         accessToken, 
-         {  httpOnly: true, 
-            secure: process.env.NODE_ENV === "production", 
-            sameSite: "strict",
-            maxAge: 60* 60,
-        });
-    response.cookies.set(
-        "refreshToken", 
-         refreshToken, 
-            { httpOnly: true, 
-              secure: process.env.NODE_ENV === "production", 
-              sameSite: "strict",
-              maxAge: 7 * 24 * 60 * 60, 
-            });
-
+    setAuthCookies(response, { accessToken, refreshToken, refreshExpiresAt });
     return response;
-    } catch (error) {
+  } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
-        return failure(" Please try different credentials", 409);
+      // Lost a race between the checks above and the insert.
+      return failure("Username or email already in use", 409);
     }
-    console.error('Error registering user', error);
-    return failure(
-        "Error registering user", 
-        500
-    );
-}
+    console.error("Error registering user", error);
+    return failure("Error registering user", 500);
+  }
 }

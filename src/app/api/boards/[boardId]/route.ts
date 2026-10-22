@@ -26,7 +26,7 @@ export async function GET(request:NextRequest, { params }: { params: Promise<{ b
         if(!session)
             return failure(
                 "user not Authorised",
-                401
+                401 
             )
         
         const board = await prisma.board.findUnique({
@@ -56,7 +56,7 @@ export async function GET(request:NextRequest, { params }: { params: Promise<{ b
         }
 
         if (board.members.length === 0) {
-            return failure("Unauthorized", 401);
+            return failure("Unauthorized", 403);
         }
 
         const { members, ...boardData } = board;
@@ -86,7 +86,7 @@ export async function PATCH(request:NextRequest, { params }: { params: Promise<{
     try {
         const boardIdSchema = z.uuid();
         const {boardId} = await params;
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const bodyParsed = updateBoardSchema.safeParse(body)
         if (!bodyParsed.success) {
             return failure(

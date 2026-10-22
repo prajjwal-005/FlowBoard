@@ -34,7 +34,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
         const validColumnId = parseColumnId.data;
         const validTaskId   = parseTaskId.data;
         const validSubtaskId= parseSubtask.data;
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = UpdateSubtaskSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(

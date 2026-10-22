@@ -1,55 +1,3 @@
-// import { failure } from "@/lib/api";
-// import { getSession } from "@/lib/session";
-// import { NextRequest } from "next/server";
-// import { boardIdSchema } from "@/schemas/boardSchema";
-// import { prisma } from "@/lib/prisma";
-// import { hasPermission } from "@/lib/rbac";
-
-// export async function POST(request:NextRequest,{params}:{params:Promise<{boardId:string}>}) {
-//     try {
-//         const session = await getSession(request);
-//         if(!session)
-//             return failure(
-//                 "Not authenticated",
-//                 401
-//             )
-
-//         const {boardId} = await params;
-//         const body      = await request.json();
-//         const parseBoardId = boardIdSchema.safeParse(boardId);
-//         if(!parseBoardId.success){
-//             return failure(
-//                 "Invalid input",
-//                 400
-//             )
-//         }
-//         const {columnId,prevOrder,nextOrder}
-//         const validBoardId = parseBoardId.data;
-//         const boardMember = await prisma.boardMember.findUnique({
-//             where:{
-//                 userID_boardID:{
-//                     userID:session.userID,
-//                     boardID:validBoardId
-//                 }
-//             }
-//         })
-//         if(!boardMember)
-//             return failure(
-//                 "Not authorised",
-//                 403
-//             )
-//         if(!hasPermission(boardMember.role,"UPDATE_COLUMN"))
-//             return failure(
-//                 "Not authorised",
-//                 403
-//             )
-
-//     } catch (error) {
-        
-//     }
-    
-// }
-
 import { success, failure } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { NextRequest } from "next/server";
@@ -61,7 +9,7 @@ import { logActivity } from "@/lib/activity";
 import { emitColumnReordered } from "@/socket/emitters";
 
 const reorderColumnSchema = z.object({
-  columnId: z.string().uuid(),
+  columnId: z.uuid(),
   prevOrder: z.number().int().nullable(),
   nextOrder: z.number().int().nullable(),
 });
@@ -118,7 +66,7 @@ export async function POST( request: NextRequest,{ params }: { params: Promise<{
         );
 
     const { boardId } = await params;
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
 
     const parseBoardId = z.uuid().safeParse(boardId);
     if (!parseBoardId.success) 

@@ -21,5 +21,6 @@ export type UpdateBoardInput = z.infer<typeof updateBoardSchema>;
 
 export const boardIdSchema = z.uuid();    
 export const columnSchema = z.object({
-  title: z.string().min(1).max(100).trim()
+  title:z.string().trim().min(1).max(100)
 });
+

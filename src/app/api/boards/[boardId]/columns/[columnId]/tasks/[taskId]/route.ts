@@ -127,7 +127,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
         const validBoardId  = parseBoardId.data;
         const validColumnId = parseColumnId.data;
         const validTaskId   = parseTaskId.data
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = UpdateTaskSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(
@@ -231,12 +231,12 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
         } else {
             emitTaskUpdated(validBoardId, toTaskBase(task))
         }
-        if (dueDate !== undefined && dueDate?.toISOString() !== task.dueDate?.toISOString()) {
+        if (dueDate !== undefined && dueDate?.toISOString() !== taskExist.dueDate?.toISOString()) {
             for (const a of task.taskAssignee) {
                 createNotification({ userID: a.userID, actorID: session.userID, type: 'TASK_DUE_DATE_CHANGED', message: `Task ${task.title} due date changed`, boardID: validBoardId, entityType: 'TASK', entityID: validTaskId })
             }
         }
-        if (priority !== undefined && priority !== task.priority) {
+        if (priority !== undefined && priority !== taskExist.priority) {
             for (const a of task.taskAssignee) { 
                 createNotification({ userID: a.userID, actorID: session.userID, type: 'TASK_PRIORITY_CHANGED', message: `Task ${task.title} priority changed`, boardID: validBoardId, entityType: 'TASK', entityID: validTaskId })
             }

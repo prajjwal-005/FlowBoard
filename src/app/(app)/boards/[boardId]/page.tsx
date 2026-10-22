@@ -115,7 +115,7 @@ export default function BoardDetailPage() {
     handleDragEnd,
   } = useBoardDnd(params.boardId);
   function handleAddSuggestions(titles: string[]) {
-    titles.forEach((title) => addSubtask({ title }));
+    titles.forEach((title) => addSubtask({ title, isCompleted: false }));
     // remove added titles from cached suggestions so they don't linger in the checklist
     queryClient.setQueryData(
         suggestionsKey(params.boardId, selectedTaskId ?? ""),
@@ -303,7 +303,7 @@ return (
           onUpdateComment={(id, content) => updateComment({ commentId: id, content })}
           onUpdateField={(field, value) => updateTask({ [field]: value })}
           onDeleteTask={() => deleteTask(selectedTaskId, { onSuccess: () => setSelectedTaskId(null) })}
-          onAddSubtask={(title) => addSubtask({ title })}
+          onAddSubtask={(title) => addSubtask({ title, isCompleted: false })}
           onToggleSubtask={(id, isCompleted) => toggleSubtask({ subtaskId: id, isCompleted })}
           onDeleteSubtask={deleteSubtask}
           onAddComment={(content) => addComment({ content })}

@@ -8,7 +8,7 @@ import * as z from "zod";
 import { logActivity } from "@/lib/activity";
 import { emitColumnDeleted, emitColumnRenamed } from "@/socket/emitters";
 const columnSchema  = z.object({
-    title: z.string().min(1).max(100).trim(),
+    title: z.string().trim().min(1).max(100),
     order: z.number().nonnegative()
 });
 const patchColumnSchema = columnSchema.partial().refine(
@@ -40,7 +40,7 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{board
             "Invalid Input",
             400
         )
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = patchColumnSchema.safeParse(body);
         if(!parsedBody.success) 
         return failure(

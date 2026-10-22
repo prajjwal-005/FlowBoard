@@ -31,7 +31,7 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
         const validBoardId  = parseBoardId.data;
         const validColumnId = parseColumnId.data;
         const validTaskId   = parseTaskId.data
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = AssigneeSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(
@@ -39,6 +39,25 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
                 400
             ) 
         const {userID} = parsedBody.data;
+        
+        const currentBoardMember  = await prisma.boardMember.findUnique({
+            where:{
+                userID_boardID:{
+                    userID:session.userID,
+                    boardID:validBoardId
+                }    
+            }
+        })
+        if(!currentBoardMember )
+            return failure( 
+                "not Authorised",
+                403
+            )
+        if(!hasPermission(currentBoardMember .role,"ASSIGN_MEMBER"))
+            return failure(
+                "Forbidden",
+                403
+            )
         const targetUser = await prisma.user.findUnique({
             where: { 
                 id: userID 
@@ -53,25 +72,6 @@ export async function POST(request:NextRequest, {params}:{params:Promise<{boardI
             "User does not exist", 
             404
         );
-        const member = await prisma.boardMember.findUnique({
-            where:{
-                userID_boardID:{
-                    userID:session.userID,
-                    boardID:validBoardId
-                }    
-            }
-        })
-        if(!member)
-            return failure( 
-                "not Authorised",
-                403
-            )
-        if(!hasPermission(member.role,"ASSIGN_MEMBER"))
-            return failure(
-                "Forbidden",
-                403
-            )
-        
         const boardMember = await prisma.boardMember.findUnique({
             where: { 
                 userID_boardID:{
@@ -174,7 +174,7 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
         const validBoardId  = parseBoardId.data;
         const validColumnId = parseColumnId.data;
         const validTaskId   = parseTaskId.data
-        const body = await request.json();
+        const body = await request.json().catch(() => null);
         const parsedBody = AssigneeSchema.safeParse(body);
         if(!parsedBody.success)
            return failure(
@@ -182,19 +182,7 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
                 400
             ) 
         const {userID} = parsedBody.data;
-        const targetUser = await prisma.user.findUnique({
-            where: { 
-                id: userID 
-            },
-            select: { 
-                id: true, 
-                username: true 
-            } 
-        });
-        if(!targetUser) return failure(
-            "User does not exist", 
-            404
-        );
+       
         const member = await prisma.boardMember.findUnique({
             where:{
                 userID_boardID:{
@@ -215,7 +203,20 @@ export async function DELETE(request:NextRequest, {params}:{params:Promise<{boar
             )
         
         
-        
+        const targetUser = await prisma.user.findUnique({
+            where: { 
+                id: userID 
+            },
+            select: { 
+                id: true, 
+                username: true,
+                avatarUrl:true 
+            } 
+        });
+        if(!targetUser) return failure(
+            "User does not exist", 
+            404
+        );
         const validColumn = await prisma.column.findUnique({
                 where:{
                     id:validColumnId,

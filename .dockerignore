@@ -9,7 +9,7 @@ dist
 .env.*
 !.env.example
 
-# Git
+# Git / CI
 .git
 .gitignore
 .github
@@ -21,7 +21,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Test / coverage output
+# Tests / coverage output
+tests
+vitest.config.mts
 coverage
 .nyc_output
 
@@ -37,8 +39,11 @@ Thumbs.db
 
 # Documentation / local-only files
 README.md
+docs
 
-# Local Docker files not needed inside image
+# Docker files not needed inside the image
+Dockerfile
+.dockerignore
 docker-compose.yml
 docker-compose.*.yml
 

@@ -35,6 +35,12 @@ export const usernameValidation = z
 
 export const registerSchema = z.object({
   username: usernameValidation,
-  email: z.email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z
+    .string()
+    .transform((v) => v.trim().toLowerCase())
+    .pipe(z.email("Invalid email address")),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .refine((v) => new TextEncoder().encode(v).length <= 72, "Password must be at most 72 bytes"),
 });

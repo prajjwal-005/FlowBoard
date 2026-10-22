@@ -6,7 +6,7 @@ import { getBoardPresence, removeUserFromBoard } from "./presence";
 
 export function handleConnection(socket: TypedSocket){
 
-    console.log(socket.data.username);
+    //console.log(socket.data.username);
     socket.join(userRoom(socket.data.userID));
 
     socket.on('joinBoard', (boardId, callback) => {

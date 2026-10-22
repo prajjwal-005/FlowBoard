@@ -21,7 +21,7 @@ export function failure(
   statusCode = 400,
   error?: unknown
 ) {
-    const serializedError = error instanceof Error ? error.message : error
+    const serializedError = process.env.NODE_ENV === "production" ? undefined: error instanceof Error ? error.message : error;
     return NextResponse.json(
         {
             statusCode,
