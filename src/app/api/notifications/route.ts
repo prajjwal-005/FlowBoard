@@ -2,6 +2,7 @@ import { failure, success } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { NextRequest } from "next/server";
+import z from "zod";
 
 export async function GET(request:NextRequest) {
     try {
@@ -13,20 +14,22 @@ export async function GET(request:NextRequest) {
             )
            
         const limit = 20;
-        const cursor = request.nextUrl.searchParams.get('cursor');
+        const cursorParam = request.nextUrl.searchParams.get("cursor");
+        if (cursorParam && !z.uuid().safeParse(cursorParam).success)
+            return failure("Invalid cursor", 400);
 
         const notification = await prisma.notification.findMany({
                 where: { 
                    userID:session.userID
                 },
                 take: limit,
-                ...(cursor && { skip: 1, cursor: { id: cursor } }),
+                ...(cursorParam && { skip: 1, cursor: { id: cursorParam } }),
                 orderBy: { createdAt: 'desc' },
         });
 
         const nextCursor = notification.length === limit ? notification[notification.length - 1].id : null;
 
-
+        
         return success(
                 { notifications: notification, nextCursor },
                 "Notification fetched",

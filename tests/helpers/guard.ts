@@ -34,4 +34,12 @@ export function assertSafeTestEnv() {
   if (dev.REDIS_URL && fingerprint(dev.REDIS_URL) === fingerprint(REDIS_URL)) {
     throw new Error("Refusing to reset: .env.test REDIS_URL is the same Redis db as .env");
   }
+  if (process.env.CI === "true") {
+  for (const url of [DATABASE_URL, REDIS_URL]) {
+    const host = new URL(url).hostname;
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      throw new Error("Refusing to reset: in CI the test DB/Redis must be local");
+    }
+  }
+}
 }
