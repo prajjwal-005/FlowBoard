@@ -48,7 +48,7 @@ export async function GET(request:NextRequest,{params}:{params : Promise<{boardI
                 },
                 take: limit,
                 ...(cursor && { skip: 1, cursor: { id: cursor } }),
-                orderBy: { createdAt: 'desc' },
+                orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         });
 
         const nextCursor = activities.length === limit ? activities[activities.length - 1].id : null;
@@ -63,7 +63,7 @@ export async function GET(request:NextRequest,{params}:{params : Promise<{boardI
 
     } catch (error) {
         return failure(
-            "Error updating board",
+            "Error updating activity log",
             500,
             error
         )

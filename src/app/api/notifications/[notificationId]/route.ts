@@ -42,10 +42,10 @@ export async function PATCH(request:NextRequest, {params}:{params:Promise<{notif
        
 
     } catch (error) {
-        return failure(
-            "Error updating board",
-            500,
-            error
-        )
-    }
+        if ((error as { code?: string }).code === "P2025")
+            return failure("Notification not found", 404);
+
+            return failure("Error updating notification", 500, error);
+        }
 }
+
